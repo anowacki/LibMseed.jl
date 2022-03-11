@@ -73,7 +73,7 @@ is always positive.
 
 See also: [`NanosecondDateTime`](@ref).
 """
-nanoseconds(dt::NanosecondDateTime) = dt.nanoseconds
+nanoseconds(dt::NanosecondDateTime) = dt.nanosecond
 
 """
     nearest_datetime(dt::NanosecondDateTime) -> ::Dates.DateTime
