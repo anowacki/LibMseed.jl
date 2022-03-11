@@ -1,7 +1,7 @@
 module LibMseed
 
 import Libdl
-using Dates: DateTime, Millisecond, Nanosecond
+using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
 using CEnum
 
 function __init__()

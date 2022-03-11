@@ -27,6 +27,12 @@ end
 Base.typemin(::Type{NanosecondDateTime}) = NanosecondDateTime(typemin(nstime_t))
 Base.typemax(::Type{NanosecondDateTime}) = NanosecondDateTime(typemax(nstime_t))
 
+function Base.print(io::IO, dt::NanosecondDateTime)
+    date_str = Dates.format(datetime(dt), dateformat"yyyy-mm-ddTHH:MM:SS.sss")
+    ns_str = lpad(Dates.value(nanoseconds(dt)), 6, '0')
+    print(io, date_str, ns_str)
+end
+
 """
     EPOCH ($(EPOCH))
 
@@ -103,6 +109,15 @@ struct MseedTraceSegment{T}
     data::Vector{T}
 end
 
+Base.show(io::IO, mime::MIME"text/plain", segment::MseedTraceSegment{T}) where T =
+    print(io, """
+        MseedTraceSegment{$T}:
+         starttime:    $(segment.starttime)
+         endtime:      $(segment.endtime)
+         sample_rate:  $(segment.sample_rate)
+         sample_count: $(segment.sample_count)
+        """)
+
 """
     MseedTraceID
 
@@ -122,6 +137,15 @@ struct MseedTraceID{T}
     segments::Vector{MseedTraceSegment{T}}
 end
 
+Base.show(io::IO, mime::MIME"text/plain", traceid::MseedTraceID{T}) where T =
+    print(io, """
+        MseedTraceID{$T}:
+         id:       $(traceid.id)
+         earliest: $(traceid.earliest)
+         latest:   $(traceid.latest)
+         segments: $(length(traceid.segments))
+        """)
+
 """
     MseedTraceList
 
@@ -133,6 +157,17 @@ Container for several different channels.
 """
 struct MseedTraceList
     traces::Vector{MseedTraceID}
+end
+
+function Base.show(io::IO, ::MIME"text/plain", tracelist::MseedTraceList)
+    ntraces = length(tracelist.traces)
+    s = ntraces == 1 ? "" : "s"
+    print(io, """
+        MseedTraceList:
+         $(ntraces) trace$(s):""")
+    for trace in tracelist.traces
+        print(io, "\n  \"", trace.id, "\": $(trace.earliest) $(trace.latest), $(length(trace.segments)) segments")
+    end
 end
 
 """
