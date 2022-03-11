@@ -422,8 +422,28 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
         C_NULL, verbose_level
     )
     if err < 0
-        free!(mstl[])
-        error("error reading from memory")
+        free!(mstl)
+        error("error code $err reading from memory")
+    end
+
+    tracelist = MseedTraceList(mstl)
+    free!(mstl)
+
+    tracelist
+end
+
+function read_file(file; verbose_level=0)
+    mstl = Ref(init_tracelist())
+    flags = MSF_VALIDATECRC | MSF_UNPACKDATA
+    err = ccall(
+        (:ms3_readtracelist, libmseed),
+        Cint,
+        (Ref{Ptr{_MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
+        mstl[], file, C_NULL, -1, flags, verbose_level
+    )
+    if err < 0
+        free!(mstl)
+        error("error code $err reading from file '$file'")
     end
 
     tracelist = MseedTraceList(mstl)
@@ -445,7 +465,7 @@ in a `Ref` like `Ref(mstl)`.
 # Create a new trace list for miniSEED data and allocate some memory
 mstl = Ref(init_tracelist())
 # Free the memory just allocated and destroy the trace list
-ccall((:mstl_free, libmseed), Cvoid, (Ref{Ptr{_MS3TraceList}}, Int8), mstl, 0)
+free!(mstl)
 ```
 """
 function init_tracelist(; verbose=false)
