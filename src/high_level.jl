@@ -27,6 +27,9 @@ end
 Base.typemin(::Type{NanosecondDateTime}) = NanosecondDateTime(typemin(nstime_t))
 Base.typemax(::Type{NanosecondDateTime}) = NanosecondDateTime(typemax(nstime_t))
 
+Base.:(==)(t1::NanosecondDateTime, t2::NanosecondDateTime) =
+    datetime(t1) == datetime(t2) && nanoseconds(t1) == nanoseconds(t2)
+
 function Base.print(io::IO, dt::NanosecondDateTime)
     date_str = Dates.format(datetime(dt), dateformat"yyyy-mm-ddTHH:MM:SS.sss")
     ns_str = lpad(Dates.value(nanoseconds(dt)), 6, '0')
