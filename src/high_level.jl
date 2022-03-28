@@ -435,6 +435,19 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
     tracelist
 end
 
+"""
+    read_file(file; verbose_level=0) -> tracelist
+
+Read miniSEED data from `file` on disk and return `tracelist`, (a
+`MseedTraceList`) containing the data.
+
+If `file` does not contain valid data then an error is thrown.
+
+`verbose_level` is passed to the `libmseed` routine `mstl3_readtracelist`
+to control the verbosity level, with `0` (the default) only writing
+error messages to stderr, and higher numbers causing more information
+to be printed.
+"""
 function read_file(file; verbose_level=0)
     mstl = Ref(init_tracelist())
     flags = MSF_VALIDATECRC | MSF_UNPACKDATA
