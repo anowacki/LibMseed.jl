@@ -112,14 +112,17 @@ struct MseedTraceSegment{T}
     data::Vector{T}
 end
 
-Base.show(io::IO, mime::MIME"text/plain", segment::MseedTraceSegment{T}) where T =
+function Base.show(io::IO, mime::MIME"text/plain", segment::MseedTraceSegment{T}) where T
     print(io, """
         MseedTraceSegment{$T}:
          starttime:    $(segment.starttime)
          endtime:      $(segment.endtime)
          sample_rate:  $(segment.sample_rate)
-         sample_count: $(segment.sample_count)
-        """)
+         sample_count: $(segment.sample_count)""")
+    if !isempty(segment.data)
+        print(io, """\n data:         [values between $(extrema(segment.data))]""")
+    end
+end
 
 """
     MseedTraceID
