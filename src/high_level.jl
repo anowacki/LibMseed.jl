@@ -124,6 +124,14 @@ function Base.show(io::IO, mime::MIME"text/plain", segment::MseedTraceSegment{T}
     end
 end
 
+function Base.:(==)(seg1::MseedTraceSegment, seg2::MseedTraceSegment)
+    seg1.starttime == seg2.starttime &&
+        seg1.endtime == seg2.endtime &&
+        seg1.sample_rate == seg2.sample_rate &&
+        seg2.sample_count == seg2.sample_count &&
+        seg1.data == seg2.data
+end
+
 """
     MseedTraceID
 
@@ -141,6 +149,14 @@ struct MseedTraceID{T}
     earliest::NanosecondDateTime
     latest::NanosecondDateTime
     segments::Vector{MseedTraceSegment{T}}
+end
+
+function Base.:(==)(t1::MseedTraceID, t2::MseedTraceID)
+    t1.id == t2.id &&
+        t1.earliest == t2.earliest &&
+        t1.latest == t2.latest &&
+        length(t1.segments) == length(t2.segments) &&
+        all(x -> x[1] == x[2], zip(t1.segments, t2.segments))
 end
 
 Base.show(io::IO, mime::MIME"text/plain", traceid::MseedTraceID{T}) where T =
@@ -164,6 +180,8 @@ Container for several different channels.
 struct MseedTraceList
     traces::Vector{MseedTraceID}
 end
+
+Base.:(==)(list1::MseedTraceList, list2::MseedTraceList) = list1.traces == list2.traces
 
 function Base.show(io::IO, ::MIME"text/plain", tracelist::MseedTraceList)
     ntraces = length(tracelist.traces)
