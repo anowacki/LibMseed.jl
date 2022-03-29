@@ -432,18 +432,24 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
     if version === nothing
         throw(ArgumentError("data does not seem to be miniSEED"))
     end
+    if len === nothing
+        error("buffer length cannot be determined")
+    end
     mstl = Ref(init_tracelist())
+    flags = MSF_VALIDATECRC | MSF_UNPACKDATA
     buffer_length = length(buffer)*sizeof(eltype(buffer))
     err = ccall(
         (:mstl3_readbuffer, libmseed),
         Int64,
         (Ref{Ptr{_MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
-        mstl[], buffer, buffer_length, '\0', MSF_VALIDATECRC | MSF_UNPACKDATA,
+        mstl[], buffer, buffer_length, '\0', flags,
         C_NULL, verbose_level
     )
+    # Positive values of `err` give the number of traces, so we
+    # only need to check for negative errors here.
     if err < 0
         free!(mstl)
-        error("error code $err reading from memory")
+        check_error_value_and_throw(err)
     end
 
     tracelist = MseedTraceList(mstl)
@@ -474,9 +480,11 @@ function read_file(file; verbose_level=0)
         (Ref{Ptr{_MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
         mstl[], file, C_NULL, -1, flags, verbose_level
     )
-    if err < 0
+    if err != MS_NOERROR
         free!(mstl)
-        error("error code $err reading from file '$file'")
+        check_error_value_and_throw(err, file)
+    elseif err > 0
+        check_error_value_and_warn(err, file)
     end
 
     tracelist = MseedTraceList(mstl)
@@ -547,11 +555,56 @@ function detect_buffer(data::Vector{UInt8})
         Cint,
         (Ptr{Cchar}, UInt64, Ref{UInt8}),
         data, length(data), version)
+    # Data not miniSEED condition
     if err < 0
         return nothing, nothing
+    # Condition where we cannot determine the data length
     elseif err == 0
         return Int(version[]), nothing
+    # `err` is actually the data length
     else
         return Int(version[]), Int(err)
     end
 end
+
+"English error messages which correspond to libmseed error codes"
+const _MS_ERROR_MESSAGES = Dict{Cint,String}(
+    MS_ENDOFFILE => "End of file reached",
+    MS_NOERROR => "No error",
+    MS_GENERROR => "Generic unspecified error",
+    MS_NOTSEED => "Data are not SEED",
+    MS_WRONGLENGTH => "Length of SEED data was not correct",
+    MS_OUTOFRANGE => "SEED record length out of range",
+    MS_UNKNOWNFORMAT => "Unkonwn data encoding format",
+    MS_STBADCOMPFLAG => "Invalid Steim compression flag(s)",
+    MS_INVALIDCRC => "Invalid CRC checksum for data"
+)
+
+"""
+    check_error_value_and_throw(err, file=nothing)
+
+Check `err`, a value returned by a libmseed function, and if
+it represents an error conditions, throw an error and report the
+nature of the error if possible.
+"""
+function check_error_value_and_throw(err, file=nothing)
+    file_message = _file_message(file)
+    error_message = get(_MS_ERROR_MESSAGES, err, "(unknown error code $err)")
+    error(error_message * file_message)
+end
+
+"""
+    check_error_value_and_warn(err, file=nothing)
+
+Check `err`, a value returned by a libmseed function, and if
+it represents a warning condition, warn the user with an informative
+message if possible.
+"""
+function check_error_value_and_warn(err, file=nothing)
+    file_message = _file_message(file)
+    warning_message = get(_MS_ERROR_MESSAGES, err, "(unknown warning code $err)")
+    @warn(warning_message * file_message)
+    nothing
+end
+
+_file_message(file) = file !== nothing ? " in file '$file'" : ""
