@@ -13,7 +13,7 @@ error_files = (
     @testset "Errors" begin
         @testset "$file" for file in error_files
             @test_throws ErrorException LibMseed.read_file(testfile(file))
-            @test_throws ArgumentError LibMseed.read_buffer(read(testfile(file)))
+            @test_throws ErrorException LibMseed.read_buffer(read(testfile(file)))
         end
     end
 
