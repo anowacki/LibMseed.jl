@@ -334,7 +334,7 @@ function MseedTraceID(this_traceid::_MS3TraceID)
 
     # Get reference to the first segment here so we know the element type
     this_traceseg = unsafe_load(this_traceid.first)
-    T = sample_type(Val(Char(this_traceseg.sampletype)))
+    T = sample_type(Char(this_traceseg.sampletype))
 
     traceid = MseedTraceID{T}(id, earliest, latest,
         Vector{MseedTraceSegment{T}}(undef, numsegments))
@@ -375,11 +375,28 @@ function MseedTraceSegment(T, this_traceseg::_MS3TraceSeg)
     MseedTraceSegment{T}(starttime, endtime, sample_rate, sample_count, copy(data))
 end
 
-sample_type(::Val{'f'}) = Float32
-sample_type(::Val{'d'}) = Float64
-sample_type(::Val{'i'}) = Int32
-sample_type(::Val{'a'}) = error("ASCII-format miniseed data are not currently supported")
-sample_type(::Val{T}) where T = error("unsupported sample type `$T`")
+"""
+    sample_type(t::UInt8) -> ::DataType
+
+Determine the element type of a `MseedTraceSegment` from the
+character (as a `UInt8`) `t`.
+
+If `t` corresponds to an unsupported or unknown element type,
+then an error is thrown.
+"""
+function sample_type(t)
+    if t === 'f'
+        return Float32
+    elseif t === 'd'
+        return Float64
+    elseif t === 'i'
+        return Int32
+    elseif t === 'a'
+        error("ASCII-format miniSEED data are not currently supported")
+    else
+        error("unsupported miniSEED sample type `$t`")
+    end
+end
 
 """
     bytes2string(bytes::Ntuple{N,UInt8})
