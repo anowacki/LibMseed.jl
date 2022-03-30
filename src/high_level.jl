@@ -438,6 +438,19 @@ function bytes2string(bytes::NTuple{N,UInt8}) where N
 end
 
 """
+    string2bytes(::Type{NTuple{N,T}}, str) -> bytes
+
+Convert a `String` to a null-terminated tuple of `T`s of length `N`.
+If `str` is longer than `N`, the string is truncated without warning.
+"""
+function string2bytes(::Type{NTuple{N,T}}, str::AbstractString) where {N,T}
+    isascii(str) || throw(ArgumentError("input string must be ASCII"))
+    n = length(str)
+    ntuple(i -> i <= n ? T(str[i]) : T('\0'), Val(N))
+end
+
+
+"""
     read_buffer(buffer::Vector{UInt8}, verbose_level=0) -> tracelist
 
 Parse data in `buffer` (a series of bytes) as miniSEED data and return
