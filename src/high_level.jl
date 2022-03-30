@@ -63,6 +63,11 @@ function NanosecondDateTime(nstime::nstime_t)
     NanosecondDateTime(dt, ns)
 end
 
+NanosecondDateTime(dt::DateTime) = NanosecondDateTime(dt, Nanosecond(0))
+
+Base.convert(::Type{nstime_t}, dt::NanosecondDateTime) =
+    Dates.value(datetime(dt) - EPOCH)*1_000_000 + Dates.value(nanoseconds(dt))
+
 """
     datetime(dt::NanosecondDateTime) -> ::Date.DateTime
 
