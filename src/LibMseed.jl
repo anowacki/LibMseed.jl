@@ -1,14 +1,8 @@
 module LibMseed
 
-import Libdl
+using libmseed_jll: libmseed
 using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
 using CEnum
-
-function __init__()
-    push!(Libdl.DL_LOAD_PATH, joinpath(@__DIR__, "..", "lib", "libmseed"))
-end
-
-const libmseed = :libmseed
 
 const FILE = Cvoid
 
