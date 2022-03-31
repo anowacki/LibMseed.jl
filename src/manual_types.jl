@@ -1,4 +1,6 @@
-# This file is generated manually.
+# libmseed types created manually
+
+const FILE = Cvoid
 
 @cenum LMIO_type::UInt32 begin
     LMIO_NULL = 0

@@ -2,8 +2,8 @@
 
 
 const LIBMSEED_H = 1
-const LIBMSEED_VERSION = "3.0.8"
-const LIBMSEED_RELEASE = "2020.156"
+const LIBMSEED_VERSION = "3.0.9"
+const LIBMSEED_RELEASE = "2021.234"
 const PRIsize_t = "zu"
 const MINRECLEN = 40
 const MAXRECLEN = 131172
