@@ -79,23 +79,25 @@ Base.convert(::Type{nstime_t}, dt::NanosecondDateTime) =
     Dates.value(datetime(dt) - EPOCH)*1_000_000 + Dates.value(nanoseconds(dt))
 
 """
-    datetime(dt::NanosecondDateTime) -> ::Date.DateTime
+    datetime(dt::NanosecondDateTime) -> ::Dates.DateTime
 
 Return the date and time of `dt`, rounded down to the nearest millisecond.
-Add on the number of [`nanoseconds`](@ref) to obtain the full-precision time.
+Add on the number of [`nanoseconds`](@ref LibMseed.nanoseconds) to obtain
+the full-precision time.
 
-See also: [`NanosecondDateTime`](@ref).
+See also: [`NanosecondDateTime`](@ref),
+[`nearest_datetime`](@ref LibMseed.nearest_datetime).
 """
 datetime(dt::NanosecondDateTime) = dt.datetime
 
 """
-    nanoseconds(dt::NanosecondDateTime) -> ::Date.Nanosecond(n)
+    nanoseconds(dt::NanosecondDateTime) -> ::Dates.Nanosecond(n)
 
 Return the number of additional nanoseconds of the date and time represented
-by `dt`, beyond the millisecond resolution of [`datetime`](@ref).  This value
-is always positive.
+by `dt`, beyond the millisecond resolution of [`datetime`](@ref LibMseed.datetime).
+This value is always positive.
 
-See also: [`NanosecondDateTime`](@ref).
+See also: [`NanosecondDateTime`](@ref LibMseed.NanosecondDateTime).
 """
 nanoseconds(dt::NanosecondDateTime) = dt.nanosecond
 
@@ -103,6 +105,8 @@ nanoseconds(dt::NanosecondDateTime) = dt.nanosecond
     nearest_datetime(dt::NanosecondDateTime) -> ::Dates.DateTime
 
 Round `dt` to the nearest millisecond and return a `DateTime`.
+
+See also: [`datetime`](@ref LibMseed.datetime).
 """
 nearest_datetime(dt::NanosecondDateTime) = datetime(dt) +
     Millisecond(round(Int, Dates.value(nanoseconds(dt))/1_000_000))
