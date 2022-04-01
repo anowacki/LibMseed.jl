@@ -7,8 +7,9 @@
 """
     NanosecondDateTime
 
-Type holding a standard DateTime plus a number of nanoseconds in addition
-to the millisecond resolution.
+Type representing an instance in time to nanosecond precision.
+It is made up of a standard `DateTime` plus a number of nanoseconds in addition
+to the millisecond resolution that `DateTime` offers.
 
 # Accessor functions
 - [`datetime`](@ref): Return a `Dates.DateTime`
@@ -16,6 +17,10 @@ to the millisecond resolution.
 - [`nanoseconds`](@ref): Return a `Dates.Nanosecond`
   giving the additional number of nanoseconds beyond the millsecond precision
   of the `Date.DateTime` part.
+
+# Other functions
+- [`nearest_datetime`](@ref): Return the `Dates.DateTime` nearest to the
+  `NanosecondDateTime`.
 """
 struct NanosecondDateTime
     "`DateTime`, to millisecond resolution"
@@ -63,6 +68,11 @@ function NanosecondDateTime(nstime::nstime_t)
     NanosecondDateTime(dt, ns)
 end
 
+"""
+    NanosecondDateTime(dt::DateTime)
+
+Create a `NanosecondDateTime` from a `DateTime`, `dt`.
+"""
 NanosecondDateTime(dt::DateTime) = NanosecondDateTime(dt, Nanosecond(0))
 
 Base.convert(::Type{nstime_t}, dt::NanosecondDateTime) =
