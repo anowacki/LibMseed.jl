@@ -8,7 +8,17 @@ using libmseed_jll: libmseed
 include("manual_types.jl")
 include("libmseed_common.jl")
 
-# Higher-level wrappers around functions with checking and type conversion
-include("high_level.jl")
+# Utility code for interfacing with C
+include("c_strings.jl")
+
+# Higher-level wrappers around libmseed functions with checking and type conversion
+include("nanoseconddatetime.jl")
+include("julia_types.jl")
+
+# Reading/writing/parsing
+include("io.jl")
+
+# Helper functions
+include("channel_codes.jl")
 
 end # module
