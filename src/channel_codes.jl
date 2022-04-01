@@ -30,7 +30,7 @@ function channel_code_parts(s::String)
             # Traditional SEED convention: NET_STA_LOC_CHA
             elseif nparts == 4
                 length(parts[1]) > 6 || error("unexpectedly short network name")
-                net = parts[1][7:end]
+                net = parts[1][1] == 'X' ? parts[1][7:end] : parts[1][6:end]
                 sta = parts[2]
                 loc = parts[3]
                 cha = parts[4]
