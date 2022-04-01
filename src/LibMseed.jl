@@ -1,8 +1,8 @@
 module LibMseed
 
-using libmseed_jll: libmseed
-using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
 using CEnum
+using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
+using libmseed_jll: libmseed
 
 # Bare wrappers around library functions and types
 include("manual_types.jl")
