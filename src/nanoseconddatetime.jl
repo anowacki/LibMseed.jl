@@ -107,3 +107,4 @@ See also: [`datetime`](@ref LibMseed.datetime).
 nearest_datetime(dt::NanosecondDateTime) = datetime(dt) +
     Millisecond(round(Int, Dates.value(nanoseconds(dt))/1_000_000))
 
+Dates.Time(dt::NanosecondDateTime) = Dates.Time(datetime(dt)) + nanoseconds(dt)
