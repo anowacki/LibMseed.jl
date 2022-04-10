@@ -1,3 +1,4 @@
+using Dates: DateTime
 using LibMseed
 using Test
 
@@ -37,6 +38,15 @@ using Test
         @testset "Other format" begin
             @test LibMseed.channel_code_parts("AABBCCDEF") ==
                 (net=nothing, sta="AABBCCDEF", loc=nothing, cha=nothing)
+        end
+
+        @testset "MseedTraceID" begin
+            id = "FDSN:AA_BB_CC_D_E_F"
+            earliest = latest = LibMseed.NanosecondDateTime(DateTime(1999))
+            traceid = LibMseed.MseedTraceID(id, earliest, latest,
+                LibMseed.MseedTraceSegment{Int32}[])
+            @test LibMseed.channel_code_parts(traceid) ==
+                LibMseed.channel_code_parts(id)
         end
     end
 end
