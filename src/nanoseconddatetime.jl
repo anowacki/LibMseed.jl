@@ -25,17 +25,32 @@ struct NanosecondDateTime
     nanosecond::Nanosecond
 end
 
+NanosecondDateTime(dt::NanosecondDateTime) = dt
+
 Base.typemin(::Type{NanosecondDateTime}) = NanosecondDateTime(typemin(nstime_t))
 Base.typemax(::Type{NanosecondDateTime}) = NanosecondDateTime(typemax(nstime_t))
 
+# Comparison between NanosecondDateTimes
 Base.:(==)(t1::NanosecondDateTime, t2::NanosecondDateTime) =
     datetime(t1) == datetime(t2) && nanoseconds(t1) == nanoseconds(t2)
+
+Base.:(<)(t1::NanosecondDateTime, t2::NanosecondDateTime) =
+    datetime(t1) < datetime(t2) || (datetime(t1) == datetime(t2) && nanoseconds(t1) < nanoseconds(t2))
 
 function Base.print(io::IO, dt::NanosecondDateTime)
     date_str = Dates.format(datetime(dt), dateformat"yyyy-mm-ddTHH:MM:SS.sss")
     ns_str = lpad(Dates.value(nanoseconds(dt)), 6, '0')
     print(io, date_str, ns_str)
 end
+
+# Comparisons between DateTimes and NanosecondDateTimes
+Base.:(==)(dt::DateTime, ndt::NanosecondDateTime) =
+    iszero(nanoseconds(ndt)) && dt == datetime(ndt)
+Base.:(==)(ndt::NanosecondDateTime, dt::DateTime) = dt == ndt
+
+Base.:(<)(dt::DateTime, ndt::NanosecondDateTime) =
+    dt < datetime(ndt) || (dt == datetime(ndt) && !iszero(nanoseconds(ndt)))
+Base.:(<)(ndt::NanosecondDateTime, dt::DateTime) = datetime(ndt) < dt
 
 """
     EPOCH ($(EPOCH))
@@ -107,4 +122,5 @@ See also: [`datetime`](@ref LibMseed.datetime).
 nearest_datetime(dt::NanosecondDateTime) = datetime(dt) +
     Millisecond(round(Int, Dates.value(nanoseconds(dt))/1_000_000))
 
+Dates.Date(dt::NanosecondDateTime) = Dates.Date(datetime(dt))
 Dates.Time(dt::NanosecondDateTime) = Dates.Time(datetime(dt)) + nanoseconds(dt)
