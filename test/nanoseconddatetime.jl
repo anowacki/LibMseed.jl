@@ -4,14 +4,14 @@ using Test
 
 @testset "NanosecondDateTime" begin
     @testset "Epoch" begin
-        @test LibMseed.NanosecondDateTime(0) == LibMseed.EPOCH
+        @test LibMseed.NanosecondDateTime(LibMseed.nstime_t(0)) == LibMseed.EPOCH
         @test LibMseed.NanosecondDateTime(
             DateTime("1970-01-01T00:00:00.000"), Nanosecond(0)) == LibMseed.EPOCH
     end
 
     @testset "Constructors" begin
         @testset "Integer" begin
-            @test LibMseed.NanosecondDateTime(1) ==
+            @test LibMseed.NanosecondDateTime(Int64(1)) ==
                 LibMseed.NanosecondDateTime(LibMseed.EPOCH, Nanosecond(1))
         end
 
