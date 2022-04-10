@@ -106,7 +106,8 @@ julia> LibMseed.channel_code_parts(ms.traces[1])
 `LibMseed.channel_code_parts` returns a named tuple with the component
 parts.  If a trace ID doesn't seem to correspond to the
 network-station-location-channel format, then the whole ID string is
-returned in the `sta` field of the named tuple.
+returned in the `sta` field of the named tuple and all other fiels are
+set to `nothing`.
 
 ### Writing data
 To write a continuous set of evenly-spaced samples to disk in miniSEED
