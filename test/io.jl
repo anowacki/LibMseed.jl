@@ -226,10 +226,12 @@ capture_stderr(f) = _capture(redirect_stderr, f)
         end
 
         @testset "Bad identifier" begin
-            redirect_stderr(devnull) do
-                @test_throws ErrorException LibMseed.write_data(
-                    "/dev/null", Float32[1,2,3], 1, DateTime(2000),
-                    "NOT AN ALLOWED NAME")
+            mktemp() do path, io
+                redirect_stderr(devnull) do
+                    @test_throws ErrorException LibMseed.write_data(
+                        path, Float32[1,2,3], 1, DateTime(2000),
+                        "NOT AN ALLOWED NAME")
+                end
             end
         end
     end
@@ -245,13 +247,15 @@ capture_stderr(f) = _capture(redirect_stderr, f)
         end
 
         @testset "write_data" begin
-            args = ("/dev/null", Float32[1,2,3], 1, DateTime(2000),
-                "FDSN:XX_YY_ZZ_A_B_C")
-            output1 = capture_stdout(() -> LibMseed.write_data(
-                args...)).output
-            output2 = capture_stdout(() -> LibMseed.write_data(
-                args...; verbose_level=100)).output
-            @test length(output1) < length(output2)
+            mktemp() do path, io
+                args = (path, Float32[1,2,3], 1, DateTime(2000),
+                    "FDSN:XX_YY_ZZ_A_B_C")
+                output1 = capture_stdout(() -> LibMseed.write_data(
+                    args...)).output
+                output2 = capture_stdout(() -> LibMseed.write_data(
+                    args...; verbose_level=100)).output
+                @test length(output1) < length(output2)
+            end
         end
     end
 end
