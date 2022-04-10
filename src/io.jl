@@ -105,11 +105,36 @@ end
 """
     write_data(file, data, sample_rate, starttime, id; append=false, verbose_level=0, compress=:steim2, pubversion=1, record_length=nothing) -> n
 
-Write `data` in miniSEED format to `file`.  The number of samples per second
-is given by `sample_rate`, and `starttime` is the date of the first sample.
+Write `data` in miniSEED format to `file`, returning the number of records
+written `n`.  The number of samples per second  is given by `sample_rate`.
+
+`starttime` is the date of the first sample, which must be a `Dates.DateTime`,
+or an integer number of nanoseconds since $(EPOCH).
 
 `id` is an ASCII string giving the ID of the trace.  If it is longer than
 $LM_SIDLEN characters, it is truncated with a warning.
+
+!!! note
+    The libmseed library requires `id` to be in the form
+    `FDSN[:AGENCY]:NET_STA_LOC_BAND_SOURCE_POSITION`, where `NET` is the network,
+    `STA` is the station, `LOC` is the instrumation location code,
+    `BAND` is the frequency band of recording, `SOURCE` is the code for
+    the kind of instrument, and `POSITION` gives the code for the
+    component orientation.  `AGENCY` gives information about the source
+    of the information, but this is not standard and other tools may not
+    be able to read these IDs correctly.  The Federation of Digital
+    Seismograph Networks (FDSN) describes the format at
+    http://docs.fdsn.org/projects/source-identifiers/en/v1.0/ .
+
+    For version 2 files (the default to write), the following character limits
+    are in place:
+    - `NET`: 2
+    - `STA`: 5
+    - `LOC`: 2
+    - `BAND`, `SOURCE` and `POSITION`: 1
+
+    For version 3 files, the total identifier must be less than 255 characters
+    long.
 
 Use `append=true` to add new records on to `file`; otherwise any existing
 file is overwritten.  `file` is created if it does not already exist in
@@ -132,6 +157,14 @@ this function.
 to be written respectively with Steim-1 or Steim-2 compression.  Note that
 this is only possible for `Int32` data.
 
+# miniSEED file version
+The standard in-use version for miniSEED files is version 2, which is the
+default to write.  However the libmseed library supports the newer version 3.
+Note that version 2 only supports microsecond precision for times; if you
+pass a `starttime` which is not representable by a whole number of
+microseconds, the underlying libmseed library will truncate the time to
+the whole microsecond below the time given.
+
 # All keyword arguments
 - `append = false`: If `true`, append this data to an existing file if it exists.
 - `verbose_level = 0`: Control verbosity of the libmseed library, with
@@ -143,11 +176,31 @@ this is only possible for `Int32` data.
   SEED, later versions correspond to revised data and are read from
   files in preference to earlier versions.
 - `record_length = nothing`: Control the record length of records written
-  to disk.  The default value (`-1`) allows the libmseed library to
-  determine the record length.
-- `version = 2`: miniSEED file version to write.  Note that little other
-  software supports the current version `3`, so the default is to write
-  version `2`.
+  to disk.  By default the libmseed library determines the record length.
+- `version = 2`: miniSEED file version to write (can be `2` or `3`).
+  Note that little other software supports the current version `3`, so the
+  default is to write version `2`.
+
+# Example
+```
+julia> using Dates: DateTime
+
+julia> data = rand(Float32, 1000);
+
+julia> sampling_rate = 100;
+
+julia> starttime = DateTime("2000-01-01");
+
+julia> id = "FDSN:GB_JSA__B_H_Z";
+
+julia> LibMseed.write_data("data.mseed", data, sampling_rate, starttime, id)
+1
+
+julia> LibMseed.read_file("data.mseed")
+MseedTraceList:
+ 1 trace:
+  "FDSN:GB_JSA__B_H_Z": 2000-01-01T00:00:00.000000000 2000-01-01T00:00:09.990000000, 1 segments
+```
 """
 function write_data(file, data, sample_rate, starttime, id;
         append::Bool=false, verbose_level::Integer=0,
@@ -169,7 +222,9 @@ function write_data(file, data, sample_rate, starttime, id;
     record_length !== nothing && (record_length < -1 || record_length == 0) &&
         throw(ArgumentError("unknown value for `record_length` (must be -1 or > 0)"))
     2 <= version <= 3 ||
-        @warn("miniSEED format versions other than 2 and 3 may not work")
+        throw(ArgumentError("only miniSEED format versions 2 and 3 are supported"))
+    typemin(NanosecondDateTime) <= starttime <= typemax(NanosecondDateTime) ||
+        throw(ArgumentError("date is not representable in miniSEED"))
 
     record = C_NULL
     reclen = record_length === nothing ? -1 : record_length
@@ -237,7 +292,7 @@ sample_code(::Type{Int32}) = 'i'
 sample_code(::Type{Float32}) = 'f'
 sample_code(::Type{Float64}) = 'd'
 sample_code(::AbstractVector{<:T}) where T = sample_code(T)
-sample_code() = error("unsupported data type $T for writing")
+sample_code(::Type{T}) where T = error("unsupported data type $T for writing")
 
 """
     detect_buffer(data) -> (version, length)
