@@ -181,7 +181,8 @@ capture_stderr(f) = _capture(redirect_stderr, f)
 
                 @testset "Appending" begin
                     @testset "Appending to new file" begin
-                        mktemp() do path, io
+                        mktempdir() do dir
+                            path = joinpath(dir, "test.mseed")
                             LibMseed.write_data(path, data, samprate, starttime, id)
                             ms = LibMseed.read_file(path)
                             rm(path)
