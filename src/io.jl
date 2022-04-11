@@ -270,12 +270,14 @@ function write_data(file, data, sample_rate, starttime, id;
 
     overwrite = append ? 0 : 1
 
-    err = ccall(
-        (:msr3_writemseed, libmseed),
-        Int64,
-        (Ptr{MS3Record}, Cstring, Int8, UInt32, Int8),
-        msr, file, overwrite, flags, verbose_level
-    )
+    GC.@preserve data msr begin
+        err = ccall(
+            (:msr3_writemseed, libmseed),
+            Int64,
+            (Ptr{MS3Record}, Cstring, Int8, UInt32, Int8),
+            msr, file, overwrite, flags, verbose_level
+        )
+    end
 
     if err == -1
         error("error writing records")
