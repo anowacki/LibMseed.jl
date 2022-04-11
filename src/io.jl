@@ -47,22 +47,24 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
     mstl = Ref(init_tracelist())
     flags = MSF_VALIDATECRC | MSF_UNPACKDATA
     buffer_length = length(buffer)*sizeof(eltype(buffer))
-    err = ccall(
-        (:mstl3_readbuffer, libmseed),
-        Int64,
-        (Ref{Ptr{_MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
-        mstl[], buffer, buffer_length, '\0', flags,
-        C_NULL, verbose_level
-    )
-    # Positive values of `err` give the number of traces, so we
-    # only need to check for negative errors here.
-    if err < 0
-        free!(mstl)
-        check_error_value_and_throw(err)
-    end
+    GC.@preserve mstl begin
+        err = ccall(
+            (:mstl3_readbuffer, libmseed),
+            Int64,
+            (Ref{Ptr{_MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
+            mstl[], buffer, buffer_length, '\0', flags,
+            C_NULL, verbose_level
+        )
+        # Positive values of `err` give the number of traces, so we
+        # only need to check for negative errors here.
+        if err < 0
+            free!(mstl)
+            check_error_value_and_throw(err)
+        end
 
-    tracelist = MseedTraceList(mstl)
-    free!(mstl)
+        tracelist = MseedTraceList(mstl)
+        free!(mstl)
+    end
 
     tracelist
 end
@@ -81,23 +83,25 @@ error messages to stderr, and higher numbers causing more information
 to be printed.
 """
 function read_file(file; verbose_level=0)
-    mstl = Ref(init_tracelist())
     flags = MSF_VALIDATECRC | MSF_UNPACKDATA
-    err = ccall(
-        (:ms3_readtracelist, libmseed),
-        Cint,
-        (Ref{Ptr{_MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
-        mstl[], file, C_NULL, -1, flags, verbose_level
-    )
-    if err != MS_NOERROR
-        free!(mstl)
-        check_error_value_and_throw(err, file)
-    elseif err > 0
-        check_error_value_and_warn(err, file)
-    end
+    mstl = Ref(init_tracelist())
+    GC.@preserve mstl begin
+        err = ccall(
+            (:ms3_readtracelist, libmseed),
+            Cint,
+            (Ref{Ptr{_MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
+            mstl[], file, C_NULL, -1, flags, verbose_level
+        )
+        if err != MS_NOERROR
+            free!(mstl)
+            check_error_value_and_throw(err, file)
+        elseif err > 0
+            check_error_value_and_warn(err, file)
+        end
 
-    tracelist = MseedTraceList(mstl)
-    free!(mstl)
+        tracelist = MseedTraceList(mstl)
+        free!(mstl)
+    end
 
     tracelist
 end
