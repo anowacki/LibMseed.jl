@@ -185,10 +185,10 @@ capture_stderr(f) = _capture(redirect_stderr, f)
                             path = joinpath(dir, "test.mseed")
                             LibMseed.write_data(path, data, samprate, starttime, id)
                             ms = LibMseed.read_file(path)
-                            rm(path)
-                            LibMseed.write_data(path, data, samprate, starttime, id;
+                            path2 = joinpath(dir, "test2.mseed")
+                            LibMseed.write_data(path2, data, samprate, starttime, id;
                                 append=true)
-                            ms′ = LibMseed.read_file(path)
+                            ms′ = LibMseed.read_file(path2)
                             @test ms == ms′
                         end
                     end
