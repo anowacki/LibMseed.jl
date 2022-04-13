@@ -11,7 +11,7 @@ libmseed_jll = "ccc2c699-b150-5417-88f2-a95a0d1581d9"
 [compat]
 julia = "1.6"
 CEnum = "0.4"
-libmseed_jll = "3.0.9"
+libmseed_jll = "3.0.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
