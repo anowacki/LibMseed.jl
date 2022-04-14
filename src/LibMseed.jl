@@ -4,8 +4,7 @@ using CEnum
 using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
 using libmseed_jll: libmseed
 
-# Bare wrappers around library functions and types
-include("manual_types.jl")
+# C constants and structs for libmseed
 include("libmseed_common.jl")
 
 # Utility code for interfacing with C
