@@ -3,7 +3,7 @@
 #=
     libmseed structs, reimplemented here manually
 =#
-mutable struct _MS3TraceSeg
+struct _MS3TraceSeg
     starttime::nstime_t
     endtime::nstime_t
     samprate::Cdouble
@@ -18,7 +18,7 @@ mutable struct _MS3TraceSeg
     next::Ptr{_MS3TraceSeg}
 end
 
-mutable struct _MS3TraceID
+struct _MS3TraceID
     sid::NTuple{64, UInt8}
     pubversion::UInt8
     earliest::nstime_t
@@ -30,7 +30,7 @@ mutable struct _MS3TraceID
     next::Ptr{_MS3TraceID}
 end
 
-mutable struct _MS3TraceList
+struct _MS3TraceList
     numtraces::UInt32
     traces::Ptr{_MS3TraceID}
     last::Ptr{_MS3TraceID}
