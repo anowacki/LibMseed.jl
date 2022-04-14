@@ -133,3 +133,47 @@ struct MS3TraceList
     traces::Ptr{MS3TraceID}
     last::Ptr{MS3TraceID}
 end
+
+"""
+    init_tracelist(; verbose=false) -> mstl::Ptr{MS3TraceList}
+
+Create a new `MS3TraceList`, and return a pointer to it.
+
+`mstl` can then be passed to other `libmseed` functions by wrapping it
+in a `Ref` like `Ref(mstl)`.
+
+# Example
+```
+# Create a new trace list for miniSEED data and allocate some memory
+mstl = Ref(init_tracelist())
+# Free the memory just allocated and destroy the trace list
+free!(mstl)
+```
+"""
+function init_tracelist(; verbose=false)
+    mstl = ccall((:mstl3_init, libmseed), Ptr{MS3TraceList}, (Ptr{Cvoid},), C_NULL)
+    if mstl == C_NULL
+        error("error allocating trace structure")
+    end
+    mstl
+end
+
+"""
+    free!(mstl)
+
+Free the memory associated with a trace list.
+
+The memory is managed by the `libmseed` library, and `mstl` is a
+reference to a pointer to a `MS3TraceList` struct.
+"""
+function free!(mstl::Ref{Ptr{MS3TraceList}})
+    @debug("Freeing trace memory at $(mstl[])")
+    ccall(
+        (:mstl3_free, libmseed),
+        Cvoid,
+        (Ref{Ptr{MS3TraceList}}, Int8),
+        mstl, 0)
+    @debug("Pointer now set to $(mstl[])")
+    nothing
+end
+
