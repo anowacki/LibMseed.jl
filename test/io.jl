@@ -258,4 +258,42 @@ capture_stderr(f) = _capture(redirect_stderr, f)
             end
         end
     end
+
+    @testset "Threaded IO$(Threads.nthreads() == 0 ? " (single thread)" : "")" begin
+        Threads.nthreads() == 1 &&
+            @info "Running threaded IO tests on a single thread. " *
+                "Set the environment variable `JULIA_NUM_THREADS` to > 1 " *
+                "to run multithreaded tests"
+        n = 100
+        mktempdir() do dir
+            # Write in parallel
+            tasks = map(1:n) do i
+                Threads.@spawn begin
+                    file = joinpath(dir, "data$(i).mseed")
+                    data = rand(Float32, 1000)
+                    samprate = rand(1:100)
+                    starttime = DateTime(2000, rand(1:12), rand(1:28))
+                    id = "FDSN:XX_$(i)__B_H_Z"
+                    LibMseed.write_data(file, data, samprate, starttime, id)
+                    (; file, data, samprate, starttime, id)
+                end
+            end
+            write_outputs = fetch.(tasks)
+            # Read in parallel
+            tasks = map(write_outputs) do out
+                Threads.@spawn LibMseed.read_file(out.file)
+            end
+            read_data = fetch.(tasks)
+
+            @test all(
+                map(zip(write_outputs, read_data)) do (out, ms)
+                    file, data, samprate, starttime, id = out
+                    ms.traces[1].id == id &&
+                        ms.traces[1].segments[1].sample_rate == samprate &&
+                        ms.traces[1].segments[1].starttime == starttime &&
+                        ms.traces[1].segments[1].data == data
+                end
+            )
+        end
+    end
 end
