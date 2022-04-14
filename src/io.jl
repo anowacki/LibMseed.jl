@@ -51,7 +51,7 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
         err = ccall(
             (:mstl3_readbuffer, libmseed),
             Int64,
-            (Ref{Ptr{_MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
+            (Ref{Ptr{MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
             mstl[], buffer, buffer_length, '\0', flags,
             C_NULL, verbose_level
         )
@@ -89,7 +89,7 @@ function read_file(file; verbose_level=0)
         err = ccall(
             (:ms3_readtracelist, libmseed),
             Cint,
-            (Ref{Ptr{_MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
+            (Ref{Ptr{MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
             mstl[], file, C_NULL, -1, flags, verbose_level
         )
         if err != MS_NOERROR

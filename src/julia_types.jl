@@ -1,45 +1,9 @@
 # Julia types which expose functionality to the user
 
-#=
-    libmseed structs, reimplemented here manually
-=#
-struct _MS3TraceSeg
-    starttime::nstime_t
-    endtime::nstime_t
-    samprate::Cdouble
-    samplecnt::Int64
-    datasamples::Ptr{Cvoid}
-    datasize::Csize_t
-    numsamples::Int64
-    sampletype::UInt8
-    prvtptr::Ptr{Cvoid}
-    recordlist::Ptr{MS3RecordList}
-    prev::Ptr{_MS3TraceSeg}
-    next::Ptr{_MS3TraceSeg}
-end
-
-struct _MS3TraceID
-    sid::NTuple{64, UInt8}
-    pubversion::UInt8
-    earliest::nstime_t
-    latest::nstime_t
-    prvtptr::Ptr{Cvoid}
-    numsegments::UInt32
-    first::Ptr{_MS3TraceSeg}
-    last::Ptr{_MS3TraceSeg}
-    next::Ptr{_MS3TraceID}
-end
-
-struct _MS3TraceList
-    numtraces::UInt32
-    traces::Ptr{_MS3TraceID}
-    last::Ptr{_MS3TraceID}
-end
-
 """
-    init_tracelist(; verbose=false) -> mstl::Ptr{libmseed._MS3TraceList}
+    init_tracelist(; verbose=false) -> mstl::Ptr{libmseed.MS3TraceList}
 
-Create a new `_MS3TraceList`, and return a pointer to it.
+Create a new `MS3TraceList`, and return a pointer to it.
 
 `mstl` can then be passed to other `libmseed` functions by wrapping it
 in a `Ref` like `Ref(mstl)`.
@@ -53,7 +17,7 @@ free!(mstl)
 ```
 """
 function init_tracelist(; verbose=false)
-    mstl = ccall((:mstl3_init, libmseed), Ptr{_MS3TraceList}, (Ptr{Cvoid},), C_NULL)
+    mstl = ccall((:mstl3_init, libmseed), Ptr{MS3TraceList}, (Ptr{Cvoid},), C_NULL)
     if mstl == C_NULL
         error("error allocating trace structure")
     end
@@ -68,12 +32,12 @@ Free the memory associated with a trace list.
 The memory is managed by the `libmseed` library, and `mstl` is a
 reference to a pointer to a `MS3TraceList` struct.
 """
-function free!(mstl::Ref{Ptr{_MS3TraceList}})
+function free!(mstl::Ref{Ptr{MS3TraceList}})
     @debug("Freeing trace memory at $(mstl[])")
     ccall(
         (:mstl3_free, libmseed),
         Cvoid,
-        (Ref{Ptr{_MS3TraceList}}, Int8),
+        (Ref{Ptr{MS3TraceList}}, Int8),
         mstl, 0)
     @debug("Pointer now set to $(mstl[])")
     nothing
@@ -186,15 +150,15 @@ function Base.show(io::IO, ::MIME"text/plain", tracelist::MseedTraceList)
 end
 
 """
-    MseedTraceList(mstl::Ref{Ptr{_MS3TraceList}})
+    MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
 
-Construct a `MseedTraceList` from a reference to a `_MS3TraceList` struct
+Construct a `MseedTraceList` from a reference to a `MS3TraceList` struct
 obtained from a call to one of `libmseed`'s functions.
 
 This function builds a full `MseedTraceList` and copies the data from
 `mstl`.
 """
-function MseedTraceList(mstl::Ref{Ptr{_MS3TraceList}})
+function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
     this_tracelist = unsafe_load(mstl[])
     numtraces = Int32(this_tracelist.numtraces)
     tracelist = MseedTraceList(Vector{MseedTraceID}(undef, numtraces))
@@ -220,12 +184,12 @@ function MseedTraceList(mstl::Ref{Ptr{_MS3TraceList}})
 end
 
 """
-    MseedTraceID(this_traceid::_MS3TraceID)
+    MseedTraceID(this_traceid::MS3TraceID)
 
-Construct a `MseedTraceID` from a `_MS3TraceID` object, obtained from
+Construct a `MseedTraceID` from a `MS3TraceID` object, obtained from
 a call to one of `libmseed`'s functions.
 """
-function MseedTraceID(this_traceid::_MS3TraceID)
+function MseedTraceID(this_traceid::MS3TraceID)
     id = bytes2string(this_traceid.sid)
     earliest = NanosecondDateTime(this_traceid.earliest)
     latest = NanosecondDateTime(this_traceid.latest)
@@ -258,12 +222,12 @@ function MseedTraceID(this_traceid::_MS3TraceID)
 end
 
 """
-    MseedTraceSegment(T, this_traceseg::_MS3TraceSeg) -> segment
+    MseedTraceSegment(T, this_traceseg::MS3TraceSeg) -> segment
 
-Construct a `MseedTraceSegment{T}` from `_MS3TraceSeg` object obtained
+Construct a `MseedTraceSegment{T}` from `MS3TraceSeg` object obtained
 from a call to one of `libmseed`'s functions.
 """
-function MseedTraceSegment(T, this_traceseg::_MS3TraceSeg)
+function MseedTraceSegment(T, this_traceseg::MS3TraceSeg)
     starttime = NanosecondDateTime(this_traceseg.starttime)
     endtime = NanosecondDateTime(this_traceseg.endtime)
     sample_rate = this_traceseg.samprate
