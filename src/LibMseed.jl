@@ -1,6 +1,5 @@
 module LibMseed
 
-using CEnum
 using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
 using libmseed_jll: libmseed
 
