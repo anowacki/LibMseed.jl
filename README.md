@@ -114,7 +114,7 @@ set to `nothing`.
 
 ### Writing data
 To write a continuous set of evenly-spaced samples to disk in miniSEED
-format, use the unexported `LibMseed.write_data` function.
+format, use the unexported `LibMseed.write_file` function.
 
 Here we create some random data, set the necessary parameters (including
 the date of the first sample) and write it to a new file, `"example2.mseed"`.
@@ -130,12 +130,12 @@ julia> id = "FDSN:XX_STA_00_H_H_Z";
 
 julia> starttime = DateTime(2000);
 
-julia> LibMseed.write_data("example2.mseed", data, sampling_rate, starttime, id)
+julia> LibMseed.write_file("example2.mseed", data, sampling_rate, starttime, id)
 2
 ```
 
 If we wanted to add a separate segment of data for this channel, or a
-different channel entirely, then we can call `write_data` again but
+different channel entirely, then we can call `write_file` again but
 use the `append=true` keyword argument:
 
 ```julia
@@ -143,7 +143,7 @@ julia> data2 = randn(100)
 
 julia> starttime2 = DateTime(2000, 1, 1, 12);
 
-julia> LibMseed.write_data("example2.mseed", data2, sampling_rate, starttime2, id; append=true)
+julia> LibMseed.write_file("example2.mseed", data2, sampling_rate, starttime2, id; append=true)
 1
 
 julia> ms2 = LibMseed.read_file("example2.mseed")

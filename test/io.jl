@@ -122,30 +122,30 @@ capture_stderr(f) = _capture(redirect_stderr, f)
                     # This test doesn't depend on the data type
                     if datatype == Int32
                         @testset "Vector{$T} not supported" for T in (Int8, Int16, Int64, Float16)
-                            @test_throws ErrorException LibMseed.write_data(
+                            @test_throws ErrorException LibMseed.write_file(
                                 file, rand(T, 10), 100, Dates.now(), "FDSN:AA_BB_CC_D_E_F")
                         end
                     end
 
                     @testset "$comp not supported" for comp in (:steim1, :steim2)
-                        @test_throws ArgumentError LibMseed.write_data(valid_args...;
+                        @test_throws ArgumentError LibMseed.write_file(valid_args...;
                             compress=comp)
                     end
 
                     @testset "Record length $len" for len in (-2, 0)
-                        @test_throws ArgumentError LibMseed.write_data(valid_args...;
+                        @test_throws ArgumentError LibMseed.write_file(valid_args...;
                             record_length=len)
                     end
 
                     @testset "Invalid version $version" for version in (1, 4)
-                        @test_throws ArgumentError LibMseed.write_data(valid_args...;
+                        @test_throws ArgumentError LibMseed.write_file(valid_args...;
                             version=version)
                     end
 
                     @testset "Date outside range" begin
-                        @test_throws ArgumentError LibMseed.write_data(
+                        @test_throws ArgumentError LibMseed.write_file(
                             file, data, samprate, Dates.DateTime("1200-01-01"), id)
-                        @test_throws ArgumentError LibMseed.write_data(
+                        @test_throws ArgumentError LibMseed.write_file(
                             file, data, samprate, Dates.DateTime("3000-01-01"), id)
                     end
                 end
@@ -160,7 +160,7 @@ capture_stderr(f) = _capture(redirect_stderr, f)
 
                     @testset "Version $version" for version in (2, 3)
                         let starttime = version == 2 ? version_2_starttime : starttime
-                            LibMseed.write_data(valid_args...; version=version)
+                            LibMseed.write_file(valid_args...; version=version)
                             ms = LibMseed.read_file(file)
                             @test ms isa LibMseed.MseedTraceList
                             @test length(ms.traces) == 1
@@ -183,10 +183,10 @@ capture_stderr(f) = _capture(redirect_stderr, f)
                     @testset "Appending to new file" begin
                         mktempdir() do dir
                             path = joinpath(dir, "test.mseed")
-                            LibMseed.write_data(path, data, samprate, starttime, id)
+                            LibMseed.write_file(path, data, samprate, starttime, id)
                             ms = LibMseed.read_file(path)
                             path2 = joinpath(dir, "test2.mseed")
-                            LibMseed.write_data(path2, data, samprate, starttime, id;
+                            LibMseed.write_file(path2, data, samprate, starttime, id;
                                 append=true)
                             ms′ = LibMseed.read_file(path2)
                             @test ms == ms′
@@ -195,10 +195,10 @@ capture_stderr(f) = _capture(redirect_stderr, f)
 
                     @testset "Appending segments" begin
                         starttime1 = DateTime(2000, 1, 1)
-                        LibMseed.write_data(file, data, samprate, starttime1, id)
+                        LibMseed.write_file(file, data, samprate, starttime1, id)
                         starttime2 = DateTime(2000, 1, 1, 1)
                         data2 = rand(datatype, 20)
-                        LibMseed.write_data(file, data2, samprate, starttime2, id;
+                        LibMseed.write_file(file, data2, samprate, starttime2, id;
                             append=true)
                         ms = LibMseed.read_file(file)
                         segments = only(ms.traces).segments
@@ -211,8 +211,8 @@ capture_stderr(f) = _capture(redirect_stderr, f)
 
                     @testset "Appending traces" begin
                         id2 = replace(id, "AA"=>"XX")
-                        LibMseed.write_data(file, data, samprate, starttime, id)
-                        LibMseed.write_data(file, data, samprate, starttime, id2;
+                        LibMseed.write_file(file, data, samprate, starttime, id)
+                        LibMseed.write_file(file, data, samprate, starttime, id2;
                             append=true)
                         ms = LibMseed.read_file(file)
                         @test length(ms.traces) == 2
@@ -228,7 +228,7 @@ capture_stderr(f) = _capture(redirect_stderr, f)
         @testset "Bad identifier" begin
             mktemp() do path, io
                 redirect_stderr(devnull) do
-                    @test_throws ErrorException LibMseed.write_data(
+                    @test_throws ErrorException LibMseed.write_file(
                         path, Float32[1,2,3], 1, DateTime(2000),
                         "NOT AN ALLOWED NAME")
                 end
@@ -246,13 +246,13 @@ capture_stderr(f) = _capture(redirect_stderr, f)
             @test length(output1) < length(output2)
         end
 
-        @testset "write_data" begin
+        @testset "write_file" begin
             mktemp() do path, io
                 args = (path, Float32[1,2,3], 1, DateTime(2000),
                     "FDSN:XX_YY_ZZ_A_B_C")
-                output1 = capture_stdout(() -> LibMseed.write_data(
+                output1 = capture_stdout(() -> LibMseed.write_file(
                     args...)).output
-                output2 = capture_stdout(() -> LibMseed.write_data(
+                output2 = capture_stdout(() -> LibMseed.write_file(
                     args...; verbose_level=100)).output
                 @test length(output1) < length(output2)
             end
@@ -274,7 +274,7 @@ capture_stderr(f) = _capture(redirect_stderr, f)
                     samprate = rand(1:100)
                     starttime = DateTime(2000, rand(1:12), rand(1:28))
                     id = "FDSN:XX_$(i)__B_H_Z"
-                    LibMseed.write_data(file, data, samprate, starttime, id)
+                    LibMseed.write_file(file, data, samprate, starttime, id)
                     (; file, data, samprate, starttime, id)
                 end
             end

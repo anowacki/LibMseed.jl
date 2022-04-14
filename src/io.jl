@@ -107,7 +107,7 @@ function read_file(file; verbose_level=0)
 end
 
 """
-    write_data(file, data, sample_rate, starttime, id; append=false, verbose_level=0, compress=:steim2, pubversion=1, record_length=nothing) -> n
+    write_file(file, data, sample_rate, starttime, id; append=false, verbose_level=0, compress=:steim2, pubversion=1, record_length=nothing) -> n
 
 Write `data` in miniSEED format to `file`, returning the number of records
 written `n`.  The number of samples per second  is given by `sample_rate`.
@@ -197,7 +197,7 @@ julia> starttime = DateTime("2000-01-01");
 
 julia> id = "FDSN:GB_JSA__B_H_Z";
 
-julia> LibMseed.write_data("data.mseed", data, sampling_rate, starttime, id)
+julia> LibMseed.write_file("data.mseed", data, sampling_rate, starttime, id)
 1
 
 julia> LibMseed.read_file("data.mseed")
@@ -206,7 +206,7 @@ MseedTraceList:
   "FDSN:GB_JSA__B_H_Z": 2000-01-01T00:00:00.000000000 2000-01-01T00:00:09.990000000, 1 segments
 ```
 """
-function write_data(file, data, sample_rate, starttime, id;
+function write_file(file, data, sample_rate, starttime, id;
         append::Bool=false, verbose_level::Integer=0,
         compress::Union{Nothing,Symbol}=nothing,
         pubversion::Integer=1, record_length::Union{Nothing,Integer}=nothing,
