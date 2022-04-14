@@ -55,7 +55,7 @@ MseedTraceList:
 
 ### Accessing data
 `LibMseed.read_file` returns a `LibMseed.MseedTraceList`, which is a structure
-holding an arbitrar number of traces (corresonding to individual channels),
+holding an arbitrary number of traces (corresonding to individual channels),
 each of which may hold an arbitrary number of segments.
 
 Access the traces within the `MseedTraceList` object via its `traces`
@@ -154,7 +154,6 @@ MseedTraceList:
 julia> segs = only(ms2.traces).segments;
 
 julia> getproperty.(segs, [:starttime :endtime]) # One row per segment, start and end time
-2×2 Matrix{LibMseed.NanosecondDateTime}:
 2×2 Matrix{LibMseed.NanosecondDateTime}:
  NanosecondDateTime(DateTime("2000-01-01T00:00:00"), Nanosecond(0))  …  NanosecondDateTime(DateTime("2000-01-01T00:00:09.990"), Nanosecond(0))
  NanosecondDateTime(DateTime("2000-01-01T12:00:00"), Nanosecond(0))     NanosecondDateTime(DateTime("2000-01-01T12:00:00.990"), Nanosecond(0))
