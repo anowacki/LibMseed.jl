@@ -86,6 +86,45 @@ Create a `NanosecondDateTime` from a `DateTime`, `dt`.
 """
 NanosecondDateTime(dt::DateTime) = NanosecondDateTime(dt, Nanosecond(0))
 
+"""
+    NanosecondDateTime(str)
+
+Create a `NanosecondDateTime` from a string.  It must be in the standard
+format `"yyyy-mm-ddTHH:MM:SS.s"`.  (See [`Dates.DateFormat`](@ref)
+for a description of the fields.)  Note that nanosecond precision can
+be given, but need not be.
+
+# Examples
+```
+julia> NanosecondDateTime("1990-01-02T03:04:05.123456789")
+NanosecondDateTime("1990-01-02T03:04:05.123456789")
+
+julia> NanosecondDateTime("2000-01-01")
+NanosecondDateTime("2000-01-01T00:00:00.000000000")
+```
+"""
+function NanosecondDateTime(str::AbstractString)
+    isempty(str) && throw(ArgumentError("string cannot be empty"))
+    # After this we are safe to treat bytes and characters the same
+    isascii(str) ||
+        throw(ArgumentError("date string must be in the format yyyy-mm-ddTHH:MM:SS.sssssssss"))
+    # Parse the first bit up to milliseconds
+    # FIXME: Can do this without the strip and allocations
+    str = strip(str)
+    dt = DateTime(first(str, 23))
+    # Parse the remainder as micro- and nanoseconds
+    if length(str) > 23
+        ns_str = str[24:end]
+        length(ns_str) > 6 &&
+            throw(ArgumentError("too many decimal places in the seconds"))
+        # FIXME: Can do this without allocating another string
+        ns = parse(Int, rpad(ns_str, 6, '0'))
+        return NanosecondDateTime(dt, Nanosecond(ns))
+    else
+        return NanosecondDateTime(dt)
+    end
+end
+
 Base.convert(::Type{nstime_t}, dt::NanosecondDateTime) =
     Dates.value(datetime(dt) - EPOCH)*1_000_000 + Dates.value(nanoseconds(dt))
 

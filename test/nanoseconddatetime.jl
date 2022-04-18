@@ -24,6 +24,28 @@ using Test
             dt = LibMseed.NanosecondDateTime(now(), Nanosecond(123456))
             @test dt == LibMseed.NanosecondDateTime(dt)
         end
+
+        @testset "String" begin
+            @test_throws ArgumentError NanosecondDateTime("")
+            @test_throws ArgumentError NanosecondDateTime("2000")
+            @test_throws ArgumentError NanosecondDateTime("2000-20-01T")
+            # The 'Τ' below is actually 'T': ASCII/Unicode U+0054 (capital tau)
+            @test_throws ArgumentError Nanosecond("2000-01-01Τ01:02")
+            @test_throws ArgumentError Nanosecond("2000-01-01T00:00:00.1234567890")
+            @test NanosecondDateTime("1990-01-02T03:04:05.123456789") ==
+                NanosecondDateTime(DateTime(1990, 1, 2, 3, 4, 5, 123), Nanosecond(456789))
+            @test NanosecondDateTime("1990-01-02T03:04:05.123456") ==
+                NanosecondDateTime(DateTime(1990, 1, 2, 3, 4, 5, 123), Nanosecond(456000))
+            @test NanosecondDateTime("1990-01-02T03:04:05.1234") ==
+                NanosecondDateTime(DateTime(1990, 1, 2, 3, 4, 5, 123), Nanosecond(400000))
+            @test NanosecondDateTime("1990-01-02T03:04:05.123") ==
+                NanosecondDateTime(DateTime(1990, 1, 2, 3, 4, 5, 123), Nanosecond(0))
+            @test NanosecondDateTime("1990-01-02T03:04:05") ==
+                NanosecondDateTime(DateTime(1990, 1, 2, 3, 4, 5), Nanosecond(0))
+            # Whitespace
+            @test NanosecondDateTime("  1990-01-02T03:04:05.123456789  ") ==
+                NanosecondDateTime(DateTime(1990, 1, 2, 3, 4, 5, 123), Nanosecond(456789))
+        end
     end
 
     @testset "Accessors" begin
