@@ -9,7 +9,7 @@ and writing data in the miniSEED format.
 
 ## Installation
 ### Dependencies
-- Julia v1.6 or later
+- Julia v1.6 or later.
 
 ### Installation instructions
 You can install LibMseed.jl from Julia's package manager like so:
@@ -20,13 +20,17 @@ julia> using Pkg; Pkg.add(url="https://github.com/anowacki/LibMseed.jl")
 
 ## Using the package
 
+`LibMseed` exports several functions with common names, such as `read_file`
+and `write_file`.  It is recommended to either explicitly import the functions
+you need, or always prepend names with `LibMseed`.
+
 ### Reading data from disk
-Use the unexported `LibMseed.read_file` function to read miniSEED data
+Use `read_file` function to read miniSEED data
 from disk.  Here we assume you have a file called `example.mseed` in the
 current dirctory.
 
 ```julia
-julia> using LibMseed
+julia> import LibMseed
 
 julia> ms = LibMseed.read_file("example.mseed")
 MseedTraceList:
@@ -64,8 +68,8 @@ property:
 ```julia
 julia> ms.traces
 2-element Vector{LibMseed.MseedTraceID}:
- LibMseed.MseedTraceID{Int32}("FDSN:GB_CWF__B_H_Z", LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:56:45.404"), Dates.Nanosecond(999000)), LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:57:45.384"), Dates.Nanosecond(999000)), LibMseed.MseedTraceSegment{Int32}[LibMseed.MseedTraceSegment{Int32}(LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:56:45.404"), Dates.Nanosecond(999000)), LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:57:45.384"), Dates.Nanosecond(999000)), 50.0, 3000, Int32[1466, 1466, 1453, 1449, 1449, 1443, 1441, 1443, 1444, 1439  …  -12421, -15146, 6993, 32994, 34813, 29718, 17484, 4468, 13498, 21614])])
- LibMseed.MseedTraceID{Int32}("FDSN:GB_CWF__H_H_Z", LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:56:45.409"), Dates.Nanosecond(999000)), LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:57:45.399"), Dates.Nanosecond(999000)), LibMseed.MseedTraceSegment{Int32}[LibMseed.MseedTraceSegment{Int32}(LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:56:45.409"), Dates.Nanosecond(999000)), LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:57:45.399"), Dates.Nanosecond(999000)), 100.0, 6000, Int32[1469, 1469, 1463, 1465, 1447, 1449, 1457, 1450, 1447, 1446  …  28750, 19408, 13748, 9836, -1323, 11130, 21097, 20900, 14103, 10817])])
+ LibMseed.MseedTraceID{Int32}("FDSN:GB_CWF__B_H_Z", NanosecondDateTime("2008-02-27T00:56:45.404999000"), NanosecondDateTime("2008-02-27T00:57:45.384999000"), LibMseed.MseedTraceSegment{Int32}[LibMseed.MseedTraceSegment{Int32}(NanosecondDateTime("2008-02-27T00:56:45.404999000"), NanosecondDateTime("2008-02-27T00:57:45.384999000"), 50.0, 3000, Int32[1466, 1466, 1453, 1449, 1449, 1443, 1441, 1443, 1444, 1439  …  -12421, -15146, 6993, 32994, 34813, 29718, 17484, 4468, 13498, 21614])])
+ LibMseed.MseedTraceID{Int32}("FDSN:GB_CWF__H_H_Z", NanosecondDateTime("2008-02-27T00:56:45.409999000"), NanosecondDateTime("2008-02-27T00:57:45.399999000"), LibMseed.MseedTraceSegment{Int32}[LibMseed.MseedTraceSegment{Int32}(NanosecondDateTime("2008-02-27T00:56:45.409999000"), NanosecondDateTime("2008-02-27T00:57:45.399999000"), 100.0, 6000, Int32[1469, 1469, 1463, 1465, 1447, 1449, 1457, 1450, 1447, 1446  …  28750, 19408, 13748, 9836, -1323, 11130, 21097, 20900, 14103, 10817])])
 ```
 
 Each trace is a `LibMseed.MseedTraceID` which has a single channel code.
@@ -75,7 +79,7 @@ accessed by the `MseedTraceID`'s `segments` property:
 ```julia
 julia> ms.traces[1].segments
 1-element Vector{LibMseed.MseedTraceSegment{Int32}}:
- LibMseed.MseedTraceSegment{Int32}(LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:56:45.404"), Dates.Nanosecond(999000)), LibMseed.NanosecondDateTime(Dates.DateTime("2008-02-27T00:57:45.384"), Dates.Nanosecond(999000)), 50.0, 3000, Int32[1466, 1466, 1453, 1449, 1449, 1443, 1441, 1443, 1444, 1439  …  -12421, -15146, 6993, 32994, 34813, 29718, 17484, 4468, 13498, 21614])
+ LibMseed.MseedTraceSegment{Int32}(NanosecondDateTime("2008-02-27T00:56:45.404999000"), NanosecondDateTime("2008-02-27T00:57:45.384999000"), 50.0, 3000, Int32[1466, 1466, 1453, 1449, 1449, 1443, 1441, 1443, 1444, 1439  …  -12421, -15146, 6993, 32994, 34813, 29718, 17484, 4468, 13498, 21614])
 ```
 
 Here, the channel GB.CWF..BHZ has only one segment.  The raw data can
@@ -155,8 +159,8 @@ julia> segs = only(ms2.traces).segments;
 
 julia> getproperty.(segs, [:starttime :endtime]) # One row per segment, start and end time
 2×2 Matrix{LibMseed.NanosecondDateTime}:
- NanosecondDateTime(DateTime("2000-01-01T00:00:00"), Nanosecond(0))  …  NanosecondDateTime(DateTime("2000-01-01T00:00:09.990"), Nanosecond(0))
- NanosecondDateTime(DateTime("2000-01-01T12:00:00"), Nanosecond(0))     NanosecondDateTime(DateTime("2000-01-01T12:00:00.990"), Nanosecond(0))
+ 2000-01-01T00:00:00.000000000  …  2000-01-01T00:00:09.990000000
+ 2000-01-01T12:00:00.000000000     2000-01-01T12:00:00.990000000
 ```
 
 #### Note on channel naming
@@ -177,7 +181,7 @@ You can convert a `NanosecondDateTime` to the nearest `Dates.DateTime`
 
 ```julia
 julia> t = ms.traces[1].segments[1].starttime
-LibMseed.NanosecondDateTime(DateTime("2008-02-27T00:56:45.404"), Dates.Nanosecond(999000))
+2008-02-27T00:56:45.404999000
 
 julia> LibMseed.nearest_datetime(t)
 2008-02-27T00:56:45.405
