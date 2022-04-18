@@ -216,3 +216,7 @@ nearest_datetime(dt::NanosecondDateTime) = datetime(dt) +
 
 Dates.Date(dt::NanosecondDateTime) = Dates.Date(datetime(dt))
 Dates.Time(dt::NanosecondDateTime) = Dates.Time(datetime(dt)) + nanoseconds(dt)
+
+Base.convert(::Type{DateTime}, ndt::NanosecondDateTime) =
+    iszero(nanoseconds(ndt)) ? datetime(ndt) :
+        throw(InexactError(:convert, DateTime, ndt))

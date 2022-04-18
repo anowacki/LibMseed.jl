@@ -56,11 +56,20 @@ using Test
         @test LibMseed.nanoseconds(ndt) == ns
     end
 
-    @testset "Conversion to $(LibMseed.nstime_t)" begin
-        i = rand(LibMseed.nstime_t)
-        ndt = LibMseed.NanosecondDateTime(i)
-        i′ = convert(Int64, ndt)
-        @test i == i′
+    @testset "Conversion" begin
+        @testset "Conversion to $(LibMseed.nstime_t)" begin
+            i = rand(LibMseed.nstime_t)
+            ndt = LibMseed.NanosecondDateTime(i)
+            i′ = convert(Int64, ndt)
+            @test i == i′
+        end
+
+        @testset "Conversion to DateTime" begin
+            @test convert(DateTime, NanosecondDateTime("1700-01-01T12:34:56.123000000")) ==
+                DateTime(1700, 1, 1, 12, 34, 56, 123)
+            @test_throws InexactError convert(DateTime,
+                NanosecondDateTime("2000-01-01T00:00:00.000000001"))
+        end        
     end
 
     @testset "nearest_datetime" begin
