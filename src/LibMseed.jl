@@ -3,6 +3,21 @@ module LibMseed
 using Dates: Dates, DateTime, Millisecond, Nanosecond, @dateformat_str
 using libmseed_jll: libmseed
 
+export
+    # Data types
+    MSeedTraceList,
+    MSeedTraceID,
+    MseedTraceSegment,
+    # Date and time
+    NanosecondDateTime,
+    datetime,
+    nearest_datetime,
+    nanoseconds,
+    # IO
+    read_buffer,
+    read_file,
+    write_file
+
 # C constants and structs for libmseed
 include("c_types.jl")
 
