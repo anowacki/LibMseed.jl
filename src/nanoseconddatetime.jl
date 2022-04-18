@@ -43,6 +43,12 @@ function Base.print(io::IO, dt::NanosecondDateTime)
     print(io, date_str, ns_str)
 end
 
+# Human-readable format
+Base.show(io::IO, ::MIME"text/plain", dt::NanosecondDateTime) = print(io, dt)
+
+# Parsable format
+Base.show(io::IO, dt::NanosecondDateTime) = print(io, "NanosecondDateTime(\"", dt, "\")")
+
 # Comparisons between DateTimes and NanosecondDateTimes
 Base.:(==)(dt::DateTime, ndt::NanosecondDateTime) =
     iszero(nanoseconds(ndt)) && dt == datetime(ndt)
@@ -67,6 +73,12 @@ Construct a `NanosecondDateTime` from an `$(nstime_t)`.  This represents
 the integer number of nanoseconds since the epoch of `1970-01-01T00:00:00.000000000`.
 Hence the range of dates which can be represented is
 `$(typemin(NanosecondDateTime)) - $(typemax(NanosecondDateTime))`.
+
+# Example
+```
+julia> NanosecondDateTime(100)
+NanosecondDateTime("1970-01-01T00:00:00.000000100")
+```
 """
 function NanosecondDateTime(nstime::nstime_t)
     epoch_ms = nstime ÷ 1_000_000
@@ -83,6 +95,20 @@ end
     NanosecondDateTime(dt::DateTime)
 
 Create a `NanosecondDateTime` from a `DateTime`, `dt`.
+
+# Example
+```
+julia> using Dates
+
+julia> dt = now()
+2021-04-18T22:03:52.145
+
+julia> ndt = NanosecondDateTime(dt)
+NanosecondDateTime("2021-04-18T22:03:52.145000000")
+
+julia> datetime(ndt) == dt
+true
+```
 """
 NanosecondDateTime(dt::DateTime) = NanosecondDateTime(dt, Nanosecond(0))
 
@@ -135,8 +161,17 @@ Return the date and time of `dt`, rounded down to the nearest millisecond.
 Add on the number of [`nanoseconds`](@ref LibMseed.nanoseconds) to obtain
 the full-precision time.
 
+# Example
+```
+julia> ndt = NanosecondDateTime("2000-01-01T01:23:45.999999999")
+NanosecondDateTime("2000-01-01T01:23:45.999999999")
+
+julia> datetime(ndt)
+2000-01-01T01:23:45.999
+```
+
 See also: [`NanosecondDateTime`](@ref),
-[`nearest_datetime`](@ref LibMseed.nearest_datetime).
+[`nearest_datetime`](@ref).
 """
 datetime(dt::NanosecondDateTime) = dt.datetime
 
@@ -147,7 +182,16 @@ Return the number of additional nanoseconds of the date and time represented
 by `dt`, beyond the millisecond resolution of [`datetime`](@ref LibMseed.datetime).
 This value is always positive.
 
-See also: [`NanosecondDateTime`](@ref LibMseed.NanosecondDateTime).
+# Example
+```
+julia> ndt = NanosecondDateTime("1990-01-02T00:11:22.123456789")
+NanosecondDateTime("1990-01-02T00:11:22.123456789")
+
+julia> nanoseconds(ndt)
+456789 nanoseconds
+```
+
+See also: [`NanosecondDateTime`](@ref).
 """
 nanoseconds(dt::NanosecondDateTime) = dt.nanosecond
 
@@ -156,7 +200,16 @@ nanoseconds(dt::NanosecondDateTime) = dt.nanosecond
 
 Round `dt` to the nearest millisecond and return a `DateTime`.
 
-See also: [`datetime`](@ref LibMseed.datetime).
+# Example
+```
+julia> ndt = NanosecondDateTime("1999-12-31T23:59:59.9996")
+NanosecondDateTime("1999-12-31T23:59:59.999600000")
+
+julia> nearest_datetime(ndt)
+2000-01-01T00:00:00
+```
+
+See also: [`datetime`](@ref).
 """
 nearest_datetime(dt::NanosecondDateTime) = datetime(dt) +
     Millisecond(round(Int, Dates.value(nanoseconds(dt))/1_000_000))

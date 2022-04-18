@@ -149,4 +149,28 @@ using Test
             @test !(dt < ndt)
         end
     end
+
+    @testset "Base.show" begin
+        # Helper function to get the output of `show`
+        get_string(args...; kwargs...) = let io = IOBuffer()
+            show(io, args...; kwargs...)
+            String(take!(seekstart(io)))
+        end
+
+        @testset "Single" begin
+            @test get_string(NanosecondDateTime("1999-12-31T23:59:59.999999999")) ==
+                "NanosecondDateTime(\"1999-12-31T23:59:59.999999999\")"
+            @test get_string(MIME("text/plain"), NanosecondDateTime("2000-01-02T")) == "2000-01-02T00:00:00.000000000"
+        end
+
+        @testset "Vector" begin
+            str = "2122-02-03T04:05:06.001002003"
+            ndt = NanosecondDateTime(str)
+            @test get_string(MIME("text/plain"), [ndt, ndt]) == 
+                 """
+                 2-element Vector{NanosecondDateTime}:
+                  $str
+                  $str"""
+        end
+    end
 end
