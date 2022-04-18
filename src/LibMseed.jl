@@ -5,8 +5,8 @@ using libmseed_jll: libmseed
 
 export
     # Data types
-    MSeedTraceList,
-    MSeedTraceID,
+    MseedTraceList,
+    MseedTraceID,
     MseedTraceSegment,
     # Date and time
     NanosecondDateTime,
