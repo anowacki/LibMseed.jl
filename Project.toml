@@ -1,6 +1,6 @@
 name = "LibMseed"
 uuid = "1f77302d-495a-4b02-8d15-b81beb84162e"
-authors = ["Andy Nowacki <andy.nowacki@bristol.ac.uk>"]
+authors = ["Andy Nowacki <a.nowacki@leeds.ac.uk>"]
 version = "0.1.0"
 
 [deps]
