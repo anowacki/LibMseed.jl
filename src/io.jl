@@ -24,7 +24,7 @@ function sample_type(t)
 end
 
 """
-    read_buffer(buffer::Vector{UInt8}, verbose_level=0) -> tracelist
+    read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_level=0) -> tracelist
 
 Parse data in `buffer` (a series of bytes) as miniSEED data and return
 `tracelist` (a `MseedTraceList`) containing the data.
@@ -36,7 +36,7 @@ to control the verbosity level, with `0` (the default) only writing
 error messages to stderr, and higher numbers causing more information
 to be printed.
 """
-function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
+function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_level=0)
     version, len = detect_buffer(buffer)
     if version === nothing
         throw(ArgumentError("data does not seem to be miniSEED"))
@@ -44,16 +44,20 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
     if len === nothing
         error("buffer length cannot be determined")
     end
+
     mstl = Ref(init_tracelist())
     flags = MSF_VALIDATECRC | MSF_UNPACKDATA
     buffer_length = length(buffer)*sizeof(eltype(buffer))
-    GC.@preserve mstl begin
+
+    time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
+
+    GC.@preserve mstl time_tol_func_ptr begin
         err = ccall(
             (:mstl3_readbuffer, libmseed),
             Int64,
             (Ref{Ptr{MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
             mstl[], buffer, buffer_length, '\0', flags,
-            C_NULL, verbose_level
+            tolerance, verbose_level
         )
         # Positive values of `err` give the number of traces, so we
         # only need to check for negative errors here.

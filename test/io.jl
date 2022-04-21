@@ -107,7 +107,50 @@ capture_stderr(f) = _capture(redirect_stderr, f)
         end
 
         @testset "read_buffer" begin
-            @test_throws ArgumentError LibMseed.read_buffer(UInt8[1,2,3])
+            @testset "Not SEED" begin
+                @test_throws ArgumentError LibMseed.read_buffer(UInt8[1,2,3])
+            end
+
+            @testset "time_tolerance" begin
+                @testset "Join segments" begin
+                    mktempdir() do dir
+                        file = joinpath(dir, "test.mseed")
+                        startdatetime = DateTime(2000)
+                        for i in 1:3
+                            data = rand(Float32, 3)
+                            write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
+                                append=true)
+                            startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                        end
+                        ms = read_buffer(read(file); time_tolerance=0.001)
+                        @test length(ms.traces[1].segments) == 1
+                        seg = ms.traces[1].segments[1]
+                        @test seg.starttime == NanosecondDateTime("2000-01-01T")
+                        @test seg.endtime == NanosecondDateTime("2000-01-01T00:00:08")
+                    end
+                end
+
+                @testset "Keep segments separate" begin
+                    mktempdir() do dir
+                        file = joinpath(dir, "test.mseed")
+                        startdatetime = DateTime(2000)
+                        for i in 1:3
+                            data = rand(Float32, 3)
+                            write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
+                                append=true)
+                            startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                        end
+                        ms = read_buffer(read(file); time_tolerance=0.0005)
+                        @test length(ms.traces[1].segments) == 3
+                        segs = ms.traces[1].segments
+                        @test segs[1].starttime == NanosecondDateTime("2000-01-01T")
+                        @test segs[2].starttime == NanosecondDateTime("2000-01-01T00:00:03.001")
+                        @test segs[2].endtime == NanosecondDateTime("2000-01-01T00:00:05.001")
+                        @test segs[3].starttime == NanosecondDateTime("2000-01-01T00:00:06")
+                        @test segs[3].endtime == NanosecondDateTime("2000-01-01T00:00:08")
+                    end
+                end
+            end
         end
 
         @testset "read_file" begin
@@ -290,6 +333,15 @@ capture_stderr(f) = _capture(redirect_stderr, f)
             f1 = () -> LibMseed.read_file(file)
             output1 = capture_stdout(f1).output
             f2 = () -> LibMseed.read_file(file; verbose_level=100)
+            output2 = capture_stdout(f2).output
+            @test length(output1) < length(output2)
+        end
+
+        @testset "read_buffer" begin
+            buffer = read(testfile(first(good_files)))
+            f1 = () -> LibMseed.read_buffer(buffer)
+            output1 = capture_stdout(f1).output
+            f2 = () -> LibMseed.read_buffer(buffer; verbose_level=100)
             output2 = capture_stdout(f2).output
             @test length(output1) < length(output2)
         end
