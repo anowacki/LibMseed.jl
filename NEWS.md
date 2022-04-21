@@ -6,5 +6,10 @@
   functions.
 
 ## New features
+- `read_file`, `read_buffer`: The new `time_tolerance` keyword argument can
+  be used to control whether and how adjacent trace segments with gaps are
+  joined into a single segment.  (**N.B.** This feature can only be used
+  on x86 and x86_64 platforms due to JuliaLang/julia#27174 and
+  JuliaLang/julia#32154.)
 
 ## Notable bug fixes
