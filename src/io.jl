@@ -401,9 +401,20 @@ containing a reference to
 
 `func_pointer` should be guarded in a `Base.@GC_preserve` block when
 `tolerance` is used to avoid the former being garbage collected.
+
+We have to use a Julia closure to create a `CFunction`, but this is unsupported
+on PowerPC and ARM, so this function throws an error if `time_tolerance`
+is not `nothing` on these and other non-x86 and -x86_64 platforms.  (See
+https://github.com/JuliaLang/julia/issues/27174 and
+https://github.com/JuliaLang/julia/issues/32154 .
+)
 """
 function _get_time_tolerance_func_ptr(time_tolerance)
     time_tol_func_ptr = if time_tolerance !== nothing
+        # Error out on unsupported platforms
+        if !(Sys.ARCH === :i686 || Sys.ARCH === :x86_64)
+            error("use of the time_tolerance option is not supported on ARM or PowerPC")
+        end
         # Create a closure to pass to libmseed to set the time tolerance by
         # which traces are joined up.
         time_tolerance_func(::Ptr{MS3Record})::Cdouble = time_tolerance
