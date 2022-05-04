@@ -134,6 +134,11 @@ struct MS3TraceList
     last::Ptr{MS3TraceID}
 end
 
+struct MS3Tolerance
+    time::Ptr{Cvoid}
+    samprate::Ptr{Cvoid}
+end
+
 """
     init_tracelist(; verbose=false) -> mstl::Ptr{MS3TraceList}
 

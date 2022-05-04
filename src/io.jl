@@ -24,7 +24,7 @@ function sample_type(t)
 end
 
 """
-    read_buffer(buffer::Vector{UInt8}, verbose_level=0) -> tracelist
+    read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_level=0) -> tracelist
 
 Parse data in `buffer` (a series of bytes) as miniSEED data and return
 `tracelist` (a `MseedTraceList`) containing the data.
@@ -36,7 +36,7 @@ to control the verbosity level, with `0` (the default) only writing
 error messages to stderr, and higher numbers causing more information
 to be printed.
 """
-function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
+function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_level=0)
     version, len = detect_buffer(buffer)
     if version === nothing
         throw(ArgumentError("data does not seem to be miniSEED"))
@@ -44,16 +44,20 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
     if len === nothing
         error("buffer length cannot be determined")
     end
+
     mstl = Ref(init_tracelist())
     flags = MSF_VALIDATECRC | MSF_UNPACKDATA
     buffer_length = length(buffer)*sizeof(eltype(buffer))
-    GC.@preserve mstl begin
+
+    time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
+
+    GC.@preserve mstl time_tol_func_ptr begin
         err = ccall(
             (:mstl3_readbuffer, libmseed),
             Int64,
             (Ref{Ptr{MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
             mstl[], buffer, buffer_length, '\0', flags,
-            C_NULL, verbose_level
+            tolerance, verbose_level
         )
         # Positive values of `err` give the number of traces, so we
         # only need to check for negative errors here.
@@ -70,27 +74,44 @@ function read_buffer(buffer::Vector{UInt8}, verbose_level=0)
 end
 
 """
-    read_file(file; verbose_level=0) -> tracelist
+    read_file(file; time_tolerance=nothing, verbose_level=0) -> tracelist
 
 Read miniSEED data from `file` on disk and return `tracelist`, (a
 `MseedTraceList`) containing the data.
 
 If `file` does not contain valid data then an error is thrown.
 
+By default, trace segments with gaps of less than half the nominal sampling
+interval are joined together to form a single segment.  This behaviour
+can be adjusted by passing a value in seconds to `time_tolerance`, in which
+case segments with gaps of less than `time_tolerance` s are joined.  Pass
+`time_tolerance = 0` to not merge segments with gaps.
+
+!!! note
+    `time_tolerance` can only be used on x86 and x64 platforms.  It is not
+    possible to use it on PowerPC or ARM processors such as Apple Silicon ones.
+    Users of these platforms will need to accept the default behaviour
+    and manually join segments separated with gaps larger than the default
+    tolerance.  See the note at
+    https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/#Closure-cfunctions .
+
 `verbose_level` is passed to the `libmseed` routine `mstl3_readtracelist`
 to control the verbosity level, with `0` (the default) only writing
 error messages to stderr, and higher numbers causing more information
 to be printed.
 """
-function read_file(file; verbose_level=0)
+function read_file(file; time_tolerance=nothing, verbose_level=0)
     flags = MSF_VALIDATECRC | MSF_UNPACKDATA
     mstl = Ref(init_tracelist())
-    GC.@preserve mstl begin
+
+    time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
+
+    GC.@preserve mstl time_tol_func_ptr begin
         err = ccall(
             (:ms3_readtracelist, libmseed),
             Cint,
-            (Ref{Ptr{MS3TraceList}}, Cstring, Ptr{Cvoid}, Int8, UInt32, Int8),
-            mstl[], file, C_NULL, -1, flags, verbose_level
+            (Ref{Ptr{MS3TraceList}}, Cstring, Ptr{MS3Tolerance}, Int8, UInt32, Int8),
+            mstl[], file, tolerance, -1, flags, verbose_level
         )
         if err != MS_NOERROR
             free!(mstl)
@@ -370,3 +391,44 @@ function check_error_value_and_warn(err, file=nothing)
 end
 
 _file_message(file) = file !== nothing ? " in file '$file'" : ""
+
+"""
+    _get_time_tolerance_func_ptr(time_tolerance) -> func_pointer, tolerance::MS3Tolerance
+
+If `time_tolerance` is not `nothing`, create a closure over
+`time_tolerance` and return a `Base.CFunction` and an `MS3Tolerance`
+containing a reference to
+
+`func_pointer` should be guarded in a `Base.@GC_preserve` block when
+`tolerance` is used to avoid the former being garbage collected.
+
+We have to use a Julia closure to create a `CFunction`, but this is unsupported
+on PowerPC and ARM, so this function throws an error if `time_tolerance`
+is not `nothing` on these and other non-x86 and -x86_64 platforms.  (See
+https://github.com/JuliaLang/julia/issues/27174 and
+https://github.com/JuliaLang/julia/issues/32154 .
+)
+"""
+function _get_time_tolerance_func_ptr(time_tolerance)
+    time_tol_func_ptr = if time_tolerance !== nothing
+        # Error out on unsupported platforms
+        if !(Sys.ARCH === :i686 || Sys.ARCH === :x86_64)
+            error("use of the time_tolerance option is not supported on ARM or PowerPC")
+        end
+        # Create a closure to pass to libmseed to set the time tolerance by
+        # which traces are joined up.
+        time_tolerance_func(::Ptr{MS3Record})::Cdouble = time_tolerance
+        # Pointer to put in MS3Tolerance struct
+        @cfunction($time_tolerance_func, Cdouble, (Ptr{MS3Record},))
+    else
+        # Otherwise use default
+        C_NULL
+    end
+
+    tolerance = Ref(MS3Tolerance(
+        Base.unsafe_convert(Ptr{Cvoid}, time_tol_func_ptr),
+        C_NULL)
+    )
+
+    time_tol_func_ptr, tolerance
+end
