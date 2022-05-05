@@ -20,7 +20,6 @@ function channel_code_parts(s::String)
     if startswith(s, "XFDSN:") || startswith(s, "FDSN:")
         # Seems like an XFDSN URN
         if length(s) > 6
-            length(parts[1]) > 6 || error("unexpectedly short network name")
             # URN convention: XFDSN:NET_STA_LOC_BAND_SOURCE_POSITION
             if nparts == 6
                 net = parts[1][1] == 'X' ? parts[1][7:end] : parts[1][6:end]
