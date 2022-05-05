@@ -24,10 +24,18 @@ using Test
             # Not enough parts
             @test_throws ErrorException LibMseed.channel_code_parts("XFDSN:A_B_C_D_E")
             @test_throws ErrorException LibMseed.channel_code_parts("FDSN:A_B_C_D_E")
+            # Empty network code
+            @test LibMseed.channel_code_parts("FDSN:_BB_CC_D_E_F") ==
+                (net="", sta="BB", loc="CC", cha="DEF")
+            @test LibMseed.channel_code_parts("XFDSN:_BB_CC_D_E_F") ==
+                (net="", sta="BB", loc="CC", cha="DEF")
+            # 'Empty' everything
+            @test LibMseed.channel_code_parts("XFDSN:___ _ _ ") ==
+                (net="", sta="", loc="", cha="   ")
         end
 
         @testset "_ separated" begin
-                # New format: separate channel code elements
+            # New format: separate channel code elements
             @test LibMseed.channel_code_parts("AA_BB_CC_D_E_F") ==
                 (net="AA", sta="BB", loc="CC", cha="DEF")
             # Old format: single channel code

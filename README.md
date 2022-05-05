@@ -1,7 +1,7 @@
 # LibMseed.jl
 
 [![Build Status](https://github.com/anowacki/LibMseed.jl/workflows/CI/badge.svg)](https://github.com/anowacki/LibMseed.jl/actions)
-[![Code coverage](https://codecov.io/gh/anowacki/LibMseed.jl/branch/master/graph/badge.svg?token=4XkpiFaFJN)](https://codecov.io/gh/anowacki/LibMseed.jl)
+[![Code coverage](https://codecov.io/gh/anowacki/LibMseed.jl/branch/main/graph/badge.svg?token=zZLUNA3tJk)](https://codecov.io/gh/anowacki/LibMseed.jl)
 
 LibMseed.jl is a Julia wrapper around the
 [libmseed](https://github.com/iris-edu/libmseed) library for reading
