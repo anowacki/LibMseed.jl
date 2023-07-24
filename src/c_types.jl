@@ -9,7 +9,7 @@ const FILE = Cvoid
 const LM_SIDLEN = 64
 
 # Encodings
-const DE_ASCII = 0
+const DE_TEXT = 0
 const DE_INT16 = 1
 const DE_INT32 = 3
 const DE_FLOAT32 = 4
@@ -156,7 +156,7 @@ free!(mstl)
 ```
 """
 function init_tracelist(; verbose=false)
-    mstl = ccall((:mstl3_init, libmseed), Ptr{MS3TraceList}, (Ptr{Cvoid},), C_NULL)
+    mstl = @ccall libmseed.mstl3_init(C_NULL::Ptr{Cvoid})::Ptr{MS3TraceList}
     if mstl == C_NULL
         error("error allocating trace structure")
     end
@@ -173,11 +173,7 @@ reference to a pointer to a `MS3TraceList` struct.
 """
 function free!(mstl::Ref{Ptr{MS3TraceList}})
     @debug("Freeing trace memory at $(mstl[])")
-    ccall(
-        (:mstl3_free, libmseed),
-        Cvoid,
-        (Ref{Ptr{MS3TraceList}}, Int8),
-        mstl, 0)
+    @ccall libmseed.mstl3_free(mstl::Ref{Ptr{MS3TraceList}}, 0::Int8)::Cvoid
     @debug("Pointer now set to $(mstl[])")
     nothing
 end

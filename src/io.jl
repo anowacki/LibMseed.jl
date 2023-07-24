@@ -52,13 +52,15 @@ function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_leve
     time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
 
     GC.@preserve mstl time_tol_func_ptr begin
-        err = ccall(
-            (:mstl3_readbuffer, libmseed),
-            Int64,
-            (Ref{Ptr{MS3TraceList}}, Ref{UInt8}, UInt64, Int8, UInt32, Ptr{Cvoid}, Int8),
-            mstl[], buffer, buffer_length, '\0', flags,
-            tolerance, verbose_level
-        )
+        err = @ccall libmseed.mstl3_readbuffer(
+            mstl[]::Ref{Ptr{MS3TraceList}},
+            buffer::Ref{UInt8},
+            buffer_length::UInt64,
+            '\0'::Int8,
+            flags::UInt32,
+            tolerance::Ptr{Cvoid},
+            verbose_level::Int8
+        )::Int64
         # Positive values of `err` give the number of traces, so we
         # only need to check for negative errors here.
         if err < 0
@@ -107,12 +109,15 @@ function read_file(file; time_tolerance=nothing, verbose_level=0)
     time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
 
     GC.@preserve mstl time_tol_func_ptr begin
-        err = ccall(
-            (:ms3_readtracelist, libmseed),
-            Cint,
-            (Ref{Ptr{MS3TraceList}}, Cstring, Ptr{MS3Tolerance}, Int8, UInt32, Int8),
-            mstl[], file, tolerance, -1, flags, verbose_level
-        )
+        err = @ccall libmseed.ms3_readtracelist(
+            mstl[]::Ref{Ptr{MS3TraceList}},
+            file::Cstring,
+            tolerance::Ptr{MS3Tolerance},
+            (-1)::Int8,
+            flags::UInt32,
+            verbose_level::Int8
+        )::Cint
+
         if err != MS_NOERROR
             free!(mstl)
             check_error_value_and_throw(err, file)
@@ -291,12 +296,13 @@ function write_file(file, data, sample_rate, starttime, id;
 
     overwrite = append ? 0 : 1
 
-    err = ccall(
-        (:msr3_writemseed, libmseed),
-        Int64,
-        (Ptr{MS3Record}, Cstring, Int8, UInt32, Int8),
-        msr, file, overwrite, flags, verbose_level
-    )
+    err = @ccall libmseed.msr3_writemseed(
+        msr::Ptr{MS3Record},
+        file::Cstring,
+        overwrite::Int8,
+        flags::UInt32,
+        verbose_level::Int8
+    )::Int64
 
     if err == -1
         error("error writing records")
@@ -333,11 +339,10 @@ and `length`.
 """
 function detect_buffer(data::Vector{UInt8})
     version = Ref{UInt8}()
-    err = ccall(
-        (:ms3_detect, libmseed),
-        Cint,
-        (Ptr{Cchar}, UInt64, Ref{UInt8}),
-        data, length(data), version)
+    err = @ccall libmseed.ms3_detect(
+        data::Ptr{Cchar}, length(data)::UInt64, version::Ref{UInt8}
+    )::Cint
+
     # Data not miniSEED condition
     if err < 0
         return nothing, nothing
