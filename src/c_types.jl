@@ -48,11 +48,11 @@ const MSF_MAINTAINMSTL = 0x0200
 const nstime_t = Int64
 
 # C structs used for libmseed
-struct MS3Record
+@eval struct MS3Record
     record::Cstring
     reclen::Int32
     swapflag::UInt8
-    sid::NTuple{64, UInt8}
+    sid::NTuple{$LM_SIDLEN, UInt8}
     formatversion::UInt8
     flags::UInt8
     starttime::nstime_t
@@ -116,8 +116,10 @@ struct MS3TraceSeg
     next::Ptr{MS3TraceSeg}
 end
 
-struct MS3TraceID
-    sid::NTuple{64, UInt8}
+const MSTRACEID_SKIPLIST_HEIGHT = 8
+
+@eval struct MS3TraceID
+    sid::NTuple{$LM_SIDLEN, UInt8}
     pubversion::UInt8
     earliest::nstime_t
     latest::nstime_t
@@ -125,13 +127,14 @@ struct MS3TraceID
     numsegments::UInt32
     first::Ptr{MS3TraceSeg}
     last::Ptr{MS3TraceSeg}
-    next::Ptr{MS3TraceID}
+    next::NTuple{$MSTRACEID_SKIPLIST_HEIGHT, Ptr{MS3TraceID}}
+    height::UInt8
 end
 
 struct MS3TraceList
-    numtraces::UInt32
-    traces::Ptr{MS3TraceID}
-    last::Ptr{MS3TraceID}
+    numtraceids::UInt32
+    traces::MS3TraceID
+    prngstate::UInt64
 end
 
 struct MS3Tolerance

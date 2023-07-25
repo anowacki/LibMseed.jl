@@ -402,7 +402,7 @@ _file_message(file) = file !== nothing ? " in file '$file'" : ""
 
 If `time_tolerance` is not `nothing`, create a closure over
 `time_tolerance` and return a `Base.CFunction` and an `MS3Tolerance`
-containing a reference to
+containing a reference to the function.
 
 `func_pointer` should be guarded in a `Base.@GC_preserve` block when
 `tolerance` is used to avoid the former being garbage collected.

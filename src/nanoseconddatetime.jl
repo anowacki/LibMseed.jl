@@ -17,6 +17,10 @@ to the millisecond resolution that `DateTime` offers.
 # Other functions
 - [`nearest_datetime`](@ref): Return the `Dates.DateTime` nearest to the
   `NanosecondDateTime`.
+
+# Extended `Dates` functions
+- `Date`: Return the `Date` part of a `NanosecondDateTime`.
+- `Time`: Return the `Time` part of a `NanosecondDateTime` to full ns precision.
 """
 struct NanosecondDateTime
     "`DateTime`, to millisecond resolution"
