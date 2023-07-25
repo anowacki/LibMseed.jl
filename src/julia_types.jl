@@ -112,24 +112,30 @@ This function builds a full `MseedTraceList` and copies the data from
 `mstl`.
 """
 function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
-    this_tracelist = unsafe_load(mstl[])
-    numtraces = Int32(this_tracelist.numtraces)
-    tracelist = MseedTraceList(Vector{MseedTraceID}(undef, numtraces))
+    @debug "Making MseedTraceList from $(mstl[])"
+    if mstl[] == C_NULL
+        throw(ArgumentError("cannot create a MseedTraceList from a null pointer"))
+    end
 
-    # Follow linked list through MS3TraceIDs
-    this_traceid = unsafe_load(this_tracelist.traces) # First
-    for itraceid in 1:numtraces
+    this_tracelist = unsafe_load(mstl[])
+    numtraceids = Int32(this_tracelist.numtraceids)
+    tracelist = MseedTraceList(Vector{MseedTraceID}(undef, numtraceids))
+
+    # Follow skip list through MS3TraceIDs
+    @debug "Attempting to load trace id $(this_tracelist.traces.next[1])"
+    this_traceid = unsafe_load(this_tracelist.traces.next[1]) # First
+    for itraceid in 1:numtraceids
         tracelist.traces[itraceid] = MseedTraceID(this_traceid)
 
         # Move to the next trace id
-        if itraceid != numtraces && this_traceid.next == C_NULL
+        if itraceid != numtraceids && this_traceid.next[1] == C_NULL
             error("unexpectedly reached end of trace id list")
-        elseif itraceid == numtraces && this_traceid.next != C_NULL
+        elseif itraceid == numtraceids && this_traceid.next[1] != C_NULL
             @warn("unexpected extra trace ids in list")
             break
         end
-        if itraceid != numtraces
-            this_traceid = unsafe_load(this_traceid.next)
+        if itraceid != numtraceids
+            this_traceid = unsafe_load(this_traceid.next[1])
         end
     end
 
@@ -183,7 +189,10 @@ from a call to one of `libmseed`'s functions.
 function MseedTraceSegment(T, this_traceseg::MS3TraceSeg)
     starttime = NanosecondDateTime(this_traceseg.starttime)
     endtime = NanosecondDateTime(this_traceseg.endtime)
-    sample_rate = this_traceseg.samprate
+    # Note that negative sampling rates mean a sampling interval
+    sample_rate = this_traceseg.samprate >= 0 ?
+        this_traceseg.samprate :
+        -1/this_traceseg.samprate
     sample_count = this_traceseg.samplecnt
     numsamples = Int(this_traceseg.numsamples)
     samples_ptr = convert(Ptr{T}, this_traceseg.datasamples)

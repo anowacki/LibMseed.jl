@@ -15,8 +15,11 @@ and writing data in the miniSEED format.
 You can install LibMseed.jl from Julia's package manager like so:
 
 ```julia
-julia> using Pkg; Pkg.add(url="https://github.com/anowacki/LibMseed.jl")
+julia> using Pkg; Pkg.add("LibMseed")
 ```
+
+You do not need to separately install the `libmseed` library.  Instead,
+LibMseed.jl installs its own version automatically.
 
 ## Using the package
 
@@ -40,7 +43,7 @@ MseedTraceList:
 ```
 
 ### Reading data from memory
-Use the unexported `LibMseed.read_buffer` function to read miniSEED data
+Use the `LibMseed.read_buffer` function to read miniSEED data
 from memory.  This data should be a `Vector` of `UInt8`s.
 
 ```julia
@@ -118,7 +121,7 @@ set to `nothing`.
 
 ### Writing data
 To write a continuous set of evenly-spaced samples to disk in miniSEED
-format, use the unexported `LibMseed.write_file` function.
+format, use the `LibMseed.write_file` function.
 
 Here we create some random data, set the necessary parameters (including
 the date of the first sample) and write it to a new file, `"example2.mseed"`.
