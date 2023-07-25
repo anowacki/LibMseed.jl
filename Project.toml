@@ -1,7 +1,7 @@
 name = "LibMseed"
 uuid = "1f77302d-495a-4b02-8d15-b81beb84162e"
 authors = ["Andy Nowacki <a.nowacki@leeds.ac.uk>"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -9,7 +9,7 @@ libmseed_jll = "ccc2c699-b150-5417-88f2-a95a0d1581d9"
 
 [compat]
 julia = "1.6"
-libmseed_jll = "3.0.10"
+libmseed_jll = "=3.0.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
