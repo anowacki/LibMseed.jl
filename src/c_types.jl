@@ -62,7 +62,7 @@ const nstime_t = Int64
     samplecnt::Int64
     crc::UInt32
     extralength::UInt16
-    datalength::UInt16
+    datalength::UInt32
     extra::Cstring
     datasamples::Ptr{Cvoid}
     datasize::Csize_t
