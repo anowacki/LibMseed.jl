@@ -67,6 +67,19 @@ using Test
                 @test LibMseed.channel_code_parts("XFDSN:___ _ _ ") ==
                     (net="", sta="", loc="", cha="   ")
             end
+
+            @testset "Empty after '[X]FDSN:'" begin
+                @test (
+                    @test_logs (
+                        :warn, "unexpectedly short channel id"
+                    ) LibMseed.channel_code_parts("XFDSN:")
+                ) == (net="", sta="XFDSN:", loc="", cha="")
+                @test (
+                    @test_logs (
+                        :warn, "unexpectedly short channel id"
+                    ) LibMseed.channel_code_parts("FDSN:")
+                ) == (net="", sta="FDSN:", loc="", cha="")
+            end
         end
 
         @testset "_ separated" begin
