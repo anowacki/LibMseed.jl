@@ -1,11 +1,14 @@
 # Utilities for dealing with channel codes/trace IDs
 
 """
-    channel_code_parts(s) (net, sta, loc, cha)
+    channel_code_parts(s) -> (net, sta, loc, cha)
 
 Convert a single `String` `s` into its component SEED channel code parts.
 Returns a named tuple of network `net`, station `sta`, location `loc` and
 channel `cha`.  Empty components are given as empty `String`s.
+
+If the channel code does not appear to match any known pattern, `s` is
+returned in `sta` and all other parts are empty.
 
 This function assumes that `s` is an ASCII string, as per the SEED convention
 for channel IDs.
@@ -28,17 +31,20 @@ function channel_code_parts(s::String)
                 cha = join(parts[4:end])
             # Traditional SEED convention: NET_STA_LOC_CHA
             elseif nparts == 4
-                length(parts[1]) > 6 || error("unexpectedly short network name")
                 net = parts[1][1] == 'X' ? parts[1][7:end] : parts[1][6:end]
                 sta = parts[2]
                 loc = parts[3]
                 cha = parts[4]
             else
-                error("unexpected apparent XFDSN URN")
+                @warn("unexpected apparent XFDSN URN")
+                net = loc = cha = ""
+                sta = s
             end
         # Not really an XFDSN URN
         else
-            error("unexpectedly short channel id")
+            @warn("unexpectedly short channel id")
+            net = loc = cha = ""
+            sta = s
         end
 
     # Not an XFDSN URN but might have the same structure
@@ -57,10 +63,10 @@ function channel_code_parts(s::String)
             cha = join(parts[4:end])
         # Something else entirely: just put it all in sta
         else
-            net = nothing
+            net = ""
             sta = s
-            loc = nothing
-            cha = nothing
+            loc = ""
+            cha = ""
         end
     end
     (net=net, sta=sta, loc=loc, cha=cha)

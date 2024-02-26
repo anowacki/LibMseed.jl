@@ -5,33 +5,81 @@ using Test
 @testset "Channel codes" begin
     @testset "channel_code_parts" begin
         @testset "FDSN format" begin
-            # New format: separate channel code elements
-            @test LibMseed.channel_code_parts("XFDSN:AA_BB_CC_D_E_F") ==
-                (net="AA", sta="BB", loc="CC", cha="DEF")
-            @test LibMseed.channel_code_parts("FDSN:AA_BB_CC_D_E_F") ==
-                (net="AA", sta="BB", loc="CC", cha="DEF")
-            # Old format: single channel code
-            @test LibMseed.channel_code_parts("XFDSN:AA_BB_CC_DEF") ==
-                (net="AA", sta="BB", loc="CC", cha="DEF")
-            @test LibMseed.channel_code_parts("FDSN:AA_BB_CC_DEF") ==
-                (net="AA", sta="BB", loc="CC", cha="DEF")
-            # No _s
-            @test_throws ErrorException LibMseed.channel_code_parts("XFDSN:ldfjaldjjlfjk")
-            @test_throws ErrorException LibMseed.channel_code_parts("FDSN:ldfjaldjjlfjk")
-            # Too many parts
-            @test_throws ErrorException LibMseed.channel_code_parts("XFDSN:A_B_C_D_E_F_G")
-            @test_throws ErrorException LibMseed.channel_code_parts("FDSN:A_B_C_D_E_F_G")
-            # Not enough parts
-            @test_throws ErrorException LibMseed.channel_code_parts("XFDSN:A_B_C_D_E")
-            @test_throws ErrorException LibMseed.channel_code_parts("FDSN:A_B_C_D_E")
-            # Empty network code
-            @test LibMseed.channel_code_parts("FDSN:_BB_CC_D_E_F") ==
-                (net="", sta="BB", loc="CC", cha="DEF")
-            @test LibMseed.channel_code_parts("XFDSN:_BB_CC_D_E_F") ==
-                (net="", sta="BB", loc="CC", cha="DEF")
-            # 'Empty' everything
-            @test LibMseed.channel_code_parts("XFDSN:___ _ _ ") ==
-                (net="", sta="", loc="", cha="   ")
+            @testset "New format: separate channel code elements" begin
+                @test LibMseed.channel_code_parts("XFDSN:AA_BB_CC_D_E_F") ==
+                    (net="AA", sta="BB", loc="CC", cha="DEF")
+                @test LibMseed.channel_code_parts("FDSN:AA_BB_CC_D_E_F") ==
+                    (net="AA", sta="BB", loc="CC", cha="DEF")
+                # Old format: single channel code
+                @test LibMseed.channel_code_parts("XFDSN:AA_BB_CC_DEF") ==
+                    (net="AA", sta="BB", loc="CC", cha="DEF")
+                @test LibMseed.channel_code_parts("FDSN:AA_BB_CC_DEF") ==
+                    (net="AA", sta="BB", loc="CC", cha="DEF")
+            end
+
+            @testset "No _s" begin
+                @test (
+                    @test_logs (
+                        :warn, "unexpected apparent XFDSN URN"
+                    ) LibMseed.channel_code_parts("XFDSN:ldfjaldjjlfjk")
+                ) == (net="", sta="XFDSN:ldfjaldjjlfjk", loc="", cha="")
+                @test (
+                    @test_logs (
+                        :warn, "unexpected apparent XFDSN URN"
+                    ) LibMseed.channel_code_parts("FDSN:ldfjaldjjlfjk")
+                ) == (net="", sta="FDSN:ldfjaldjjlfjk", loc="", cha="")
+            end
+            
+            @testset "Too many parts" begin
+                @test (
+                    @test_logs (
+                        :warn, "unexpected apparent XFDSN URN"
+                    ) LibMseed.channel_code_parts("XFDSN:A_B_C_D_E_F_G")
+                ) == (net="", sta="XFDSN:A_B_C_D_E_F_G", loc="", cha="")
+                @test (
+                    @test_logs (
+                        :warn, "unexpected apparent XFDSN URN"
+                    ) LibMseed.channel_code_parts("FDSN:A_B_C_D_E_F_G")
+                ) == (net="", sta="FDSN:A_B_C_D_E_F_G", loc="", cha="")
+            end
+
+            @testset "Not enough parts" begin
+                @test (
+                    @test_logs (
+                        :warn, "unexpected apparent XFDSN URN"
+                    ) LibMseed.channel_code_parts("XFDSN:A_B_C_D_E")
+                ) == (net="", sta="XFDSN:A_B_C_D_E", loc="", cha="")
+                @test (
+                    @test_logs (
+                        :warn, "unexpected apparent XFDSN URN"
+                    ) LibMseed.channel_code_parts("FDSN:A_B_C_D_E")
+                ) == (net="", sta="FDSN:A_B_C_D_E", loc="", cha="")
+            end
+
+            @testset "Empty network code" begin
+                @test LibMseed.channel_code_parts("FDSN:_BB_CC_D_E_F") ==
+                    (net="", sta="BB", loc="CC", cha="DEF")
+                @test LibMseed.channel_code_parts("XFDSN:_BB_CC_D_E_F") ==
+                    (net="", sta="BB", loc="CC", cha="DEF")
+            end
+
+            @testset "'Empty' everything" begin
+                @test LibMseed.channel_code_parts("XFDSN:___ _ _ ") ==
+                    (net="", sta="", loc="", cha="   ")
+            end
+
+            @testset "Empty after '[X]FDSN:'" begin
+                @test (
+                    @test_logs (
+                        :warn, "unexpectedly short channel id"
+                    ) LibMseed.channel_code_parts("XFDSN:")
+                ) == (net="", sta="XFDSN:", loc="", cha="")
+                @test (
+                    @test_logs (
+                        :warn, "unexpectedly short channel id"
+                    ) LibMseed.channel_code_parts("FDSN:")
+                ) == (net="", sta="FDSN:", loc="", cha="")
+            end
         end
 
         @testset "_ separated" begin
@@ -45,7 +93,7 @@ using Test
 
         @testset "Other format" begin
             @test LibMseed.channel_code_parts("AABBCCDEF") ==
-                (net=nothing, sta="AABBCCDEF", loc=nothing, cha=nothing)
+                (net="", sta="AABBCCDEF", loc="", cha="")
         end
 
         @testset "MseedTraceID" begin
