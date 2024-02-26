@@ -4,7 +4,7 @@
 [![Code coverage](https://codecov.io/gh/anowacki/LibMseed.jl/branch/main/graph/badge.svg?token=zZLUNA3tJk)](https://codecov.io/gh/anowacki/LibMseed.jl)
 
 LibMseed.jl is a Julia wrapper around the
-[libmseed](https://github.com/iris-edu/libmseed) library for reading
+[libmseed](https://github.com/EarthScope/libmseed) library for reading
 and writing data in the miniSEED format.
 
 ## Installation
@@ -116,8 +116,8 @@ julia> LibMseed.channel_code_parts(ms.traces[1])
 `LibMseed.channel_code_parts` returns a named tuple with the component
 parts.  If a trace ID doesn't seem to correspond to the
 network-station-location-channel format, then the whole ID string is
-returned in the `sta` field of the named tuple and all other fiels are
-set to `nothing`.
+returned in the `sta` field of the named tuple and all other fields are
+set to `""` (the empty string).
 
 ### Writing data
 To write a continuous set of evenly-spaced samples to disk in miniSEED
