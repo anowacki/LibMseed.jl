@@ -24,7 +24,7 @@ function sample_type(t)
 end
 
 """
-    read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_level=0) -> tracelist
+    read_buffer(buffer::Vector{UInt8}; headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
 
 Parse data in `buffer` (a series of bytes) as miniSEED data and return
 `tracelist` (a `MseedTraceList`) containing the data.
@@ -36,7 +36,7 @@ to control the verbosity level, with `0` (the default) only writing
 error messages to stderr, and higher numbers causing more information
 to be printed.
 """
-function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_level=0)
+function read_buffer(buffer::Vector{UInt8}; headers_only=false, time_tolerance=nothing, verbose_level=0)
     version, len = detect_buffer(buffer)
     if version === nothing
         throw(ArgumentError("data does not seem to be miniSEED"))
@@ -46,7 +46,7 @@ function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_leve
     end
 
     mstl = Ref(init_tracelist())
-    flags = MSF_VALIDATECRC | MSF_UNPACKDATA
+    flags = headers_only ? 0x0000 : (MSF_VALIDATECRC | MSF_UNPACKDATA)
     buffer_length = length(buffer)*sizeof(eltype(buffer))
 
     time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
@@ -68,7 +68,7 @@ function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_leve
             check_error_value_and_throw(err)
         end
 
-        tracelist = MseedTraceList(mstl)
+        tracelist = MseedTraceList(mstl; headers_only)
         free!(mstl)
     end
 
@@ -76,10 +76,12 @@ function read_buffer(buffer::Vector{UInt8}; time_tolerance=nothing, verbose_leve
 end
 
 """
-    read_file(file; time_tolerance=nothing, verbose_level=0) -> tracelist
+    read_file(file; headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
 
 Read miniSEED data from `file` on disk and return `tracelist`, (a
-`MseedTraceList`) containing the data.
+`MseedTraceList`) containing the data.  If `headers_only` is `true`, then
+only headers are read the the data are not unpacked.  In this case, the element
+type of the data cannot be calculated and instead is marked as `Missing`.
 
 If `file` does not contain valid data then an error is thrown.
 
@@ -102,8 +104,8 @@ to control the verbosity level, with `0` (the default) only writing
 error messages to stderr, and higher numbers causing more information
 to be printed.
 """
-function read_file(file; time_tolerance=nothing, verbose_level=0)
-    flags = MSF_VALIDATECRC | MSF_UNPACKDATA
+function read_file(file; headers_only=false, time_tolerance=nothing, verbose_level=0)
+    flags = headers_only ? 0x0000 : (MSF_VALIDATECRC | MSF_UNPACKDATA)
     mstl = Ref(init_tracelist())
 
     time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
@@ -125,7 +127,7 @@ function read_file(file; time_tolerance=nothing, verbose_level=0)
             check_error_value_and_warn(err, file)
         end
 
-        tracelist = MseedTraceList(mstl)
+        tracelist = MseedTraceList(mstl; headers_only)
         free!(mstl)
     end
 

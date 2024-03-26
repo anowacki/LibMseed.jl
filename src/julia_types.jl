@@ -103,15 +103,15 @@ function Base.show(io::IO, ::MIME"text/plain", tracelist::MseedTraceList)
 end
 
 """
-    MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
+    MseedTraceList(mstl::Ref{Ptr{MS3TraceList}}; headers_only=false)
 
 Construct a `MseedTraceList` from a reference to a `MS3TraceList` struct
 obtained from a call to one of `libmseed`'s functions.
 
 This function builds a full `MseedTraceList` and copies the data from
-`mstl`.
+`mstl`, unless `headers_only` is `true`, in which case data is not copied.
 """
-function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
+function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}}; headers_only=false)
     @debug "Making MseedTraceList from $(mstl[])"
     if mstl[] == C_NULL
         throw(ArgumentError("cannot create a MseedTraceList from a null pointer"))
@@ -125,7 +125,7 @@ function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
     @debug "Attempting to load trace id $(this_tracelist.traces.next[1])"
     this_traceid = unsafe_load(this_tracelist.traces.next[1]) # First
     for itraceid in 1:numtraceids
-        tracelist.traces[itraceid] = MseedTraceID(this_traceid)
+        tracelist.traces[itraceid] = MseedTraceID(this_traceid; headers_only)
 
         # Move to the next trace id
         if itraceid != numtraceids && this_traceid.next[1] == C_NULL
@@ -143,12 +143,14 @@ function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}})
 end
 
 """
-    MseedTraceID(this_traceid::MS3TraceID)
+    MseedTraceID(this_traceid::MS3TraceID; headers_only=false)
 
 Construct a `MseedTraceID` from a `MS3TraceID` object, obtained from
 a call to one of `libmseed`'s functions.
+
+If `headers_only` is `true`, then the data is not read, only trace information.
 """
-function MseedTraceID(this_traceid::MS3TraceID)
+function MseedTraceID(this_traceid::MS3TraceID; headers_only=false)
     id = bytes2string(this_traceid.sid)
     earliest = NanosecondDateTime(this_traceid.earliest)
     latest = NanosecondDateTime(this_traceid.latest)
@@ -156,14 +158,16 @@ function MseedTraceID(this_traceid::MS3TraceID)
 
     # Get reference to the first segment here so we know the element type
     this_traceseg = unsafe_load(this_traceid.first)
-    T = sample_type(Char(this_traceseg.sampletype))
+    # If we are only reading headers, then we can't get the sample type
+    # and so mark as `Missing`.
+    T = headers_only ? Missing : sample_type(Char(this_traceseg.sampletype))
 
     traceid = MseedTraceID{T}(id, earliest, latest,
         Vector{MseedTraceSegment{T}}(undef, numsegments))
 
     # Follow linked list through trace MS3TraceSegs
     for itraceseg in 1:numsegments
-        traceid.segments[itraceseg] = MseedTraceSegment(T, this_traceseg)
+        traceid.segments[itraceseg] = MseedTraceSegment(T, this_traceseg; headers_only)
 
         # Move to the next trace segment
         if itraceseg != numsegments && this_traceseg.next == C_NULL
@@ -181,12 +185,15 @@ function MseedTraceID(this_traceid::MS3TraceID)
 end
 
 """
-    MseedTraceSegment(T, this_traceseg::MS3TraceSeg) -> segment
+    MseedTraceSegment(T, this_traceseg::MS3TraceSeg; headers_only=false) -> segment
 
 Construct a `MseedTraceSegment{T}` from `MS3TraceSeg` object obtained
 from a call to one of `libmseed`'s functions.
+
+If `headers_only` is `true`, then no data is wrapped and only header
+information is stored in the `segment` structure.
 """
-function MseedTraceSegment(T, this_traceseg::MS3TraceSeg)
+function MseedTraceSegment(T, this_traceseg::MS3TraceSeg; headers_only=false)
     starttime = NanosecondDateTime(this_traceseg.starttime)
     endtime = NanosecondDateTime(this_traceseg.endtime)
     # Note that negative sampling rates mean a sampling interval
@@ -195,7 +202,11 @@ function MseedTraceSegment(T, this_traceseg::MS3TraceSeg)
         -1/this_traceseg.samprate
     sample_count = this_traceseg.samplecnt
     numsamples = Int(this_traceseg.numsamples)
-    samples_ptr = convert(Ptr{T}, this_traceseg.datasamples)
-    data = unsafe_wrap(Vector{T}, samples_ptr, numsamples)
-    MseedTraceSegment{T}(starttime, endtime, sample_rate, sample_count, copy(data))
+    if headers_only
+        MseedTraceSegment{T}(starttime, endtime, sample_rate, sample_count, T[])
+    else
+        samples_ptr = convert(Ptr{T}, this_traceseg.datasamples)
+        data = unsafe_wrap(Vector{T}, samples_ptr, numsamples)
+        MseedTraceSegment{T}(starttime, endtime, sample_rate, sample_count, copy(data))
+    end
 end
