@@ -195,6 +195,50 @@ capture_stderr(f) = _capture(redirect_stderr, f)
                 end
             end
         end
+
+        @testset "Headers only" begin
+            capture_stdout() do
+                capture_stderr() do
+                    @testset "File" begin
+                        @testset "$file" for file in good_files
+                            ms = read_file(testfile(file); headers_only=true)
+                            ms_with_data = read_file(testfile(file))
+                            for (trace, trace_with_data) in zip(ms.traces, ms_with_data.traces)
+                                for (seg, seg_with_data) in zip(trace.segments, trace_with_data.segments)
+                                    @test seg.starttime == seg_with_data.starttime
+                                    @test seg.endtime == seg_with_data.endtime
+                                    @test seg.sample_rate == seg_with_data.sample_rate
+                                    @test seg.sample_rate == seg_with_data.sample_rate
+                                    @test seg.sample_count == seg_with_data.sample_count
+                                    @test eltype(seg.data) == Missing
+                                    @test isempty(seg.data)
+                                end
+                            end
+                        end
+                    end
+
+                    @testset "Buffer" begin
+                        @testset "$file" for file in good_files
+                            buf = read(testfile(file))
+                            ms = read_buffer(buf; headers_only=true)
+                            ms_with_data = read_buffer(buf)
+
+                            for (trace, trace_with_data) in zip(ms.traces, ms_with_data.traces)
+                                for (seg, seg_with_data) in zip(trace.segments, trace_with_data.segments)
+                                    @test seg.starttime == seg_with_data.starttime
+                                    @test seg.endtime == seg_with_data.endtime
+                                    @test seg.sample_rate == seg_with_data.sample_rate
+                                    @test seg.sample_rate == seg_with_data.sample_rate
+                                    @test seg.sample_count == seg_with_data.sample_count
+                                    @test eltype(seg.data) == Missing
+                                    @test isempty(seg.data)
+                                end
+                            end                    
+                        end
+                    end
+                end
+            end
+        end
     end
 
     @testset "Writing" begin
