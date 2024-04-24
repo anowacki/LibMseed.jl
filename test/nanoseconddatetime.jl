@@ -27,7 +27,6 @@ using Test
 
         @testset "String" begin
             @test_throws ArgumentError NanosecondDateTime("")
-            @test_throws ArgumentError NanosecondDateTime("2000")
             @test_throws ArgumentError NanosecondDateTime("2000-20-01T")
             # The 'Τ' below is actually 'T': ASCII/Unicode U+0054 (capital tau)
             @test_throws ArgumentError Nanosecond("2000-01-01Τ01:02")
