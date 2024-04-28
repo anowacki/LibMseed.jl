@@ -55,6 +55,9 @@ end
 capture_stdout(f) = _capture(redirect_stdout, f)
 capture_stderr(f) = _capture(redirect_stderr, f)
 
+"Return `true` if this platform supported cfunction closures"
+is_cfunc_closure_supported_platform() = Sys.ARCH in (:i686, :x86_64)
+
 @testset "IO" begin
     @testset "sample_type" begin
         @test LibMseed.sample_type('f') == Float32
@@ -112,42 +115,50 @@ capture_stderr(f) = _capture(redirect_stderr, f)
             end
 
             @testset "time_tolerance" begin
-                @testset "Join segments" begin
-                    mktempdir() do dir
-                        file = joinpath(dir, "test.mseed")
-                        startdatetime = DateTime(2000)
-                        for i in 1:3
-                            data = rand(Float32, 3)
-                            write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
-                                append=true)
-                            startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                if is_cfunc_closure_supported_platform()
+                    @testset "Join segments" begin
+                        mktempdir() do dir
+                            file = joinpath(dir, "test.mseed")
+                            startdatetime = DateTime(2000)
+                            for i in 1:3
+                                data = rand(Float32, 3)
+                                write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
+                                    append=true)
+                                startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                            end
+                            ms = read_buffer(read(file); time_tolerance=0.001)
+                            @test length(ms.traces[1].segments) == 1
+                            seg = ms.traces[1].segments[1]
+                            @test seg.starttime == NanosecondDateTime("2000-01-01T")
+                            @test seg.endtime == NanosecondDateTime("2000-01-01T00:00:08")
                         end
-                        ms = read_buffer(read(file); time_tolerance=0.001)
-                        @test length(ms.traces[1].segments) == 1
-                        seg = ms.traces[1].segments[1]
-                        @test seg.starttime == NanosecondDateTime("2000-01-01T")
-                        @test seg.endtime == NanosecondDateTime("2000-01-01T00:00:08")
                     end
-                end
 
-                @testset "Keep segments separate" begin
-                    mktempdir() do dir
-                        file = joinpath(dir, "test.mseed")
-                        startdatetime = DateTime(2000)
-                        for i in 1:3
-                            data = rand(Float32, 3)
-                            write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
-                                append=true)
-                            startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                    @testset "Keep segments separate" begin
+                        mktempdir() do dir
+                            file = joinpath(dir, "test.mseed")
+                            startdatetime = DateTime(2000)
+                            for i in 1:3
+                                data = rand(Float32, 3)
+                                write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
+                                    append=true)
+                                startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                            end
+                            ms = read_buffer(read(file); time_tolerance=0.0005)
+                            @test length(ms.traces[1].segments) == 3
+                            segs = ms.traces[1].segments
+                            @test segs[1].starttime == NanosecondDateTime("2000-01-01T")
+                            @test segs[2].starttime == NanosecondDateTime("2000-01-01T00:00:03.001")
+                            @test segs[2].endtime == NanosecondDateTime("2000-01-01T00:00:05.001")
+                            @test segs[3].starttime == NanosecondDateTime("2000-01-01T00:00:06")
+                            @test segs[3].endtime == NanosecondDateTime("2000-01-01T00:00:08")
                         end
-                        ms = read_buffer(read(file); time_tolerance=0.0005)
-                        @test length(ms.traces[1].segments) == 3
-                        segs = ms.traces[1].segments
-                        @test segs[1].starttime == NanosecondDateTime("2000-01-01T")
-                        @test segs[2].starttime == NanosecondDateTime("2000-01-01T00:00:03.001")
-                        @test segs[2].endtime == NanosecondDateTime("2000-01-01T00:00:05.001")
-                        @test segs[3].starttime == NanosecondDateTime("2000-01-01T00:00:06")
-                        @test segs[3].endtime == NanosecondDateTime("2000-01-01T00:00:08")
+                    end
+                else
+                    @testset "Unsupported platform" begin
+                        @test_throws ErrorException (
+                            read_buffer(read(testfile(first(good_files))); time_tolerance=1)
+                        )
                     end
                 end
             end
@@ -155,44 +166,53 @@ capture_stderr(f) = _capture(redirect_stderr, f)
 
         @testset "read_file" begin
             @testset "time_tolerance" begin
-                @testset "Join segments" begin
-                    mktempdir() do dir
-                        file = joinpath(dir, "test.mseed")
-                        startdatetime = DateTime(2000)
-                        for i in 1:3
-                            data = rand(Float32, 3)
-                            write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
-                                append=true)
-                            startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                if is_cfunc_closure_supported_platform()
+                    @testset "Join segments" begin
+                        mktempdir() do dir
+                            file = joinpath(dir, "test.mseed")
+                            startdatetime = DateTime(2000)
+                            for i in 1:3
+                                data = rand(Float32, 3)
+                                write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
+                                    append=true)
+                                startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                            end
+                            ms = read_file(file; time_tolerance=0.001)
+                            @test length(ms.traces[1].segments) == 1
+                            seg = ms.traces[1].segments[1]
+                            @test seg.starttime == NanosecondDateTime("2000-01-01T")
+                            @test seg.endtime == NanosecondDateTime("2000-01-01T00:00:08")
                         end
-                        ms = read_file(file; time_tolerance=0.001)
-                        @test length(ms.traces[1].segments) == 1
-                        seg = ms.traces[1].segments[1]
-                        @test seg.starttime == NanosecondDateTime("2000-01-01T")
-                        @test seg.endtime == NanosecondDateTime("2000-01-01T00:00:08")
+                    end
+
+                    @testset "Keep segments separate" begin
+                        mktempdir() do dir
+                            file = joinpath(dir, "test.mseed")
+                            startdatetime = DateTime(2000)
+                            for i in 1:3
+                                data = rand(Float32, 3)
+                                write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
+                                    append=true)
+                                startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
+                            end
+                            ms = read_file(file; time_tolerance=0.0005)
+                            @test length(ms.traces[1].segments) == 3
+                            segs = ms.traces[1].segments
+                            @test segs[1].starttime == NanosecondDateTime("2000-01-01T")
+                            @test segs[2].starttime == NanosecondDateTime("2000-01-01T00:00:03.001")
+                            @test segs[2].endtime == NanosecondDateTime("2000-01-01T00:00:05.001")
+                            @test segs[3].starttime == NanosecondDateTime("2000-01-01T00:00:06")
+                            @test segs[3].endtime == NanosecondDateTime("2000-01-01T00:00:08")
+                        end
+                    end
+                else
+                    @testset "Unsupported platform" begin
+                        @test_throws ErrorException (
+                            read_file(testfile(first(good_files)); time_tolerance=1)
+                        )
                     end
                 end
 
-                @testset "Keep segments separate" begin
-                    mktempdir() do dir
-                        file = joinpath(dir, "test.mseed")
-                        startdatetime = DateTime(2000)
-                        for i in 1:3
-                            data = rand(Float32, 3)
-                            write_file(file, data, 1, startdatetime, "FDSN:NT_STA_LO_C_H_A";
-                                append=true)
-                            startdatetime += Second(3) + (isodd(i) ? 1 : -1)*Millisecond(1)
-                        end
-                        ms = read_file(file; time_tolerance=0.0005)
-                        @test length(ms.traces[1].segments) == 3
-                        segs = ms.traces[1].segments
-                        @test segs[1].starttime == NanosecondDateTime("2000-01-01T")
-                        @test segs[2].starttime == NanosecondDateTime("2000-01-01T00:00:03.001")
-                        @test segs[2].endtime == NanosecondDateTime("2000-01-01T00:00:05.001")
-                        @test segs[3].starttime == NanosecondDateTime("2000-01-01T00:00:06")
-                        @test segs[3].endtime == NanosecondDateTime("2000-01-01T00:00:08")
-                    end
-                end
             end
         end
 
@@ -425,7 +445,11 @@ capture_stderr(f) = _capture(redirect_stderr, f)
             write_outputs = fetch.(tasks)
             # Read in parallel
             tasks = map(write_outputs) do out
-                Threads.@spawn LibMseed.read_file(out.file; time_tolerance=0)
+                if is_cfunc_closure_supported_platform()
+                    Threads.@spawn LibMseed.read_file(out.file; time_tolerance=0)
+                else
+                    Threads.@spawn LibMseed.read_file(out.file)
+                end
             end
             read_data = fetch.(tasks)
 
