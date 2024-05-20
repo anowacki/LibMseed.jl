@@ -23,6 +23,12 @@ using Test
         @testset "NanosecondDateTime" begin
             dt = LibMseed.NanosecondDateTime(now(), Nanosecond(123456))
             @test dt == LibMseed.NanosecondDateTime(dt)
+            @test_throws ArgumentError LibMseed.NanosecondDateTime(
+                now(), Nanosecond(-1)
+            )
+            @test_throws ArgumentError LibMseed.NanosecondDateTime(
+                now(), Nanosecond(1_000_000)
+            )
         end
 
         @testset "String" begin
@@ -61,6 +67,11 @@ using Test
             ndt = LibMseed.NanosecondDateTime(i)
             i′ = convert(Int64, ndt)
             @test i == i′
+        end
+
+        @testset "Out of range conversion" begin
+            @test_throws InexactError convert(LibMseed.nstime_t, LibMseed.NanosecondDateTime("3000-01-01T00:00:00.000000000"))
+            @test_throws InexactError convert(LibMseed.nstime_t, LibMseed.NanosecondDateTime("1500-01-01T00:00:00.000000000"))
         end
 
         @testset "Conversion to DateTime" begin
