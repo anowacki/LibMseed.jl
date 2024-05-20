@@ -21,12 +21,25 @@ to the millisecond resolution that `DateTime` offers.
 # Extended `Dates` functions
 - `Date`: Return the `Date` part of a `NanosecondDateTime`.
 - `Time`: Return the `Time` part of a `NanosecondDateTime` to full ns precision.
+
+!!! note
+    `NanosecondDateTime`s can represent the whole range of `DateTime`s,
+    but miniSEED files with nanosecond precision can only represent dates
+    in the range 1677-09-21T00:12:43.145224192 to 2262-04-11T23:47:16.854775807.
+    An `InexactError` will be thrown when attempting to convert `NanosecondDateTime`s
+    outside of this range into `$(nstime_t)`s.
 """
 struct NanosecondDateTime
     "`DateTime`, to millisecond resolution"
     datetime::DateTime
     "Positive number of nanoseconds.  Never more than 999999."
     nanosecond::Nanosecond
+
+    function NanosecondDateTime(datetime::DateTime, nanosecond::Nanosecond)
+        Nanosecond(0) <= nanosecond <= Nanosecond(999999) ||
+            throw(ArgumentError("nanoseconds must be in the range 0 - 999999"))
+        new(datetime, nanosecond)
+    end
 end
 
 NanosecondDateTime(dt::NanosecondDateTime) = dt
@@ -155,8 +168,11 @@ function NanosecondDateTime(str::AbstractString)
     end
 end
 
-Base.convert(::Type{nstime_t}, dt::NanosecondDateTime) =
+function Base.convert(::Type{nstime_t}, dt::NanosecondDateTime)
+    typemin(NanosecondDateTime) <= dt <= typemax(NanosecondDateTime) ||
+        throw(InexactError(:convert, nstime_t, dt))
     Dates.value(datetime(dt) - EPOCH)*1_000_000 + Dates.value(nanoseconds(dt))
+end
 
 """
     datetime(dt::NanosecondDateTime) -> ::Dates.DateTime
