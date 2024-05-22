@@ -214,6 +214,60 @@ is_cfunc_closure_supported_platform() = Sys.ARCH in (:i686, :x86_64)
                 end
 
             end
+
+            @testset "Selections" begin
+                mktempdir() do dir
+                    file = joinpath(dir, "test.mseed")
+                    write_file(file, rand(3601), 1, DateTime(1900), "FDSN:AB_CDE_FG_H_I_J")
+                    write_file(file, rand(3601), 1, DateTime(1900), "FDSN:AB_CDE_FG_H_I_K", append=true)
+                    write_file(file, rand(3601), 1, DateTime(1900), "FDSN:XX_YYY_ZZ_1_2_3", append=true)
+
+                    @testset "$func" for func in (read_file, read_buffer)
+                        source = func == read_file ? file : read(file)
+
+                        @testset "Time" begin
+                            ms = func(source, startdate=DateTime("1900-01-01T00:30"), enddate=DateTime("1900-01-01T00:45:00"))
+                            @test length(ms.traces) == 3
+                            @test all(t -> t.segments[1].starttime > DateTime(1900), ms.traces)
+                            @test all(t -> t.segments[1].starttime < DateTime(1900, 1, 1, 1), ms.traces)
+
+                            capture_stderr() do
+                                @test func(source, startdate=DateTime(1960)) ==
+                                    func(source, enddate=DateTime(1840)) ==
+                                    LibMseed.MseedTraceList([])
+                            end
+                        end
+
+                        @testset "Channel" begin
+                            @test func(source, channels="*") == func(source)
+
+                            ms = func(source, channels="*_H_I_?")
+                            @test all(
+                                in("FDSN:AB_CDE_FG_H_I_".*("J", "K")),
+                                t.id for t in ms.traces
+                            )
+                            @test !any(==("FDSN:XX_YYY_ZZ_1_2_3"), t.id for t in ms.traces)
+
+                            capture_stderr() do
+                                @test func(source, channels="no_match") == LibMseed.MseedTraceList([])
+                            end
+                        end
+
+                        @testset "Time and channel" begin
+                            ms = func(
+                                source,
+                                channels="FDSN:XX_*",
+                                startdate=DateTime("1900-01-01T00:30"),
+                                enddate=DateTime("1900-01-01T00:45")
+                            )
+                            @test length(ms.traces) == 1
+                            @test ms.traces[1].id == "FDSN:XX_YYY_ZZ_1_2_3"
+                            @test ms.traces[1].segments[1].starttime > DateTime(1900)
+                            @test ms.traces[1].segments[end].endtime < DateTime(1900, 1, 1, 1)
+                        end
+                    end
+                end
+            end
         end
 
         @testset "Headers only" begin
