@@ -107,15 +107,13 @@ function read_buffer(buffer::Vector{UInt8};
             verbose_level::Int8
         )::Int64
 
-        # libmseed returns a 'not SEED data' error if no selections match
-        if err == MS_NOTSEED && selections != C_NULL
-            free!(mstl)
-            return MseedTraceList([])
-        elseif err < 0
+        # libmseed does not returns an error if no selections match
+        if err < 0
             free!(mstl)
             check_error_value_and_throw(err)
         end
 
+        # This handles the case where there are no traces correctly
         tracelist = MseedTraceList(mstl; headers_only)
         free!(mstl)
     end
