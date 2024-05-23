@@ -120,6 +120,9 @@ function MseedTraceList(mstl::Ref{Ptr{MS3TraceList}}; headers_only=false)
     this_tracelist = unsafe_load(mstl[])
     numtraceids = Int32(this_tracelist.numtraceids)
     tracelist = MseedTraceList(Vector{MseedTraceID}(undef, numtraceids))
+    if numtraceids == 0
+        return tracelist
+    end
 
     # Follow skip list through MS3TraceIDs
     @debug "Attempting to load trace id $(this_tracelist.traces.next[1])"
