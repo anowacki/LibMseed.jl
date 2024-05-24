@@ -24,66 +24,29 @@ function sample_type(t)
 end
 
 """
-    read_buffer(buffer::Vector{UInt8}; headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
+    read_buffer(buffer::Vector{UInt8}; channels::AbstractString, startdate::DateTime, enddate::DateTime, headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
 
 Parse data in `buffer` (a series of bytes) as miniSEED data and return
 `tracelist` (a `MseedTraceList`) containing the data.
 
 If `buffer` is not valid miniSEED data, then an error is thrown.
 
-`verbose_level` is passed to the `libmseed` routine `mstl3_readbuffer`
-to control the verbosity level, with `0` (the default) only writing
-error messages to stderr, and higher numbers causing more information
-to be printed.
-"""
-function read_buffer(buffer::Vector{UInt8}; headers_only=false, time_tolerance=nothing, verbose_level=0)
-    version, len = detect_buffer(buffer)
-    if version === nothing
-        throw(ArgumentError("data does not seem to be miniSEED"))
-    end
-    if len === nothing
-        error("buffer length cannot be determined")
-    end
+`channels` can contain a globbing pattern which matches the 'id' string of
+chennls in the file, which will be of the form
+`"FDSN:NET_STA_CHA_BAND_SOURCE_POSITION"`.  By default all channels are read.
 
-    mstl = Ref(init_tracelist())
-    flags = headers_only ? 0x0000 : (MSF_VALIDATECRC | MSF_UNPACKDATA)
-    buffer_length = length(buffer)*sizeof(eltype(buffer))
+To limit data approximately to the date range `startdate` to `enddate`,
+pass these as keyword arguments.  If only one of `startdate` or `enddate`
+are set, respectively, then the `enddate` and `startdate` is left open.
+The default is to read data from all time periods.
 
-    time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
+!!! Some data from before `startdate` or after `enddate` may be included
+    as only whole blocks are returned.  You will need to cut the data
+    after reading to ensure no samples outside the desired time window
+    are present.
 
-    GC.@preserve mstl time_tol_func_ptr begin
-        err = @ccall libmseed.mstl3_readbuffer(
-            mstl[]::Ref{Ptr{MS3TraceList}},
-            buffer::Ref{UInt8},
-            buffer_length::UInt64,
-            '\0'::Int8,
-            flags::UInt32,
-            tolerance::Ptr{Cvoid},
-            verbose_level::Int8
-        )::Int64
-        # Positive values of `err` give the number of traces, so we
-        # only need to check for negative errors here.
-        if err < 0
-            free!(mstl)
-            check_error_value_and_throw(err)
-        end
-
-        tracelist = MseedTraceList(mstl; headers_only)
-        free!(mstl)
-    end
-
-    tracelist
-end
-
-"""
-    read_file(file; headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
-
-Read miniSEED data from `file` on disk and return `tracelist`, (a
-`MseedTraceList`) containing the data.  If `headers_only` is `true`, then
-only headers are read the the data are not unpacked.  In this case, the element
-type of the data cannot be calculated and instead is marked as `Missing`.
-
-If `file` does not contain valid data then an error is thrown.
+If no records match `channels`, or all data for selected channels lie
+outside `startdate` to `enddate`, then an empty tracelist is returned.
 
 By default, trace segments with gaps of less than half the nominal sampling
 interval are joined together to form a single segment.  This behaviour
@@ -99,32 +62,148 @@ case segments with gaps of less than `time_tolerance` s are joined.  Pass
     tolerance.  See the note at
     https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/#Closure-cfunctions .
 
-`verbose_level` is passed to the `libmseed` routine `mstl3_readtracelist`
+`verbose_level` is passed to the `libmseed` routine `mstl3_readbuffer`
 to control the verbosity level, with `0` (the default) only writing
 error messages to stderr, and higher numbers causing more information
 to be printed.
 """
-function read_file(file; headers_only=false, time_tolerance=nothing, verbose_level=0)
+function read_buffer(buffer::Vector{UInt8};
+    headers_only=false,
+    channels=nothing,
+    startdate=nothing,
+    enddate=nothing,
+    time_tolerance=nothing,
+    verbose_level=0
+)
+    version, len = detect_buffer(buffer)
+    if version === nothing
+        throw(ArgumentError("data does not seem to be miniSEED"))
+    end
+    if len === nothing
+        error("buffer length cannot be determined")
+    end
+
+    mstl = Ref(init_tracelist())
+    flags = headers_only ? 0x0000 : (MSF_VALIDATECRC | MSF_UNPACKDATA)
+    buffer_length = length(buffer)*sizeof(eltype(buffer))
+
+    time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
+
+    selections, selecttime = if all(isnothing, (channels, startdate, enddate))
+        C_NULL, C_NULL
+    else
+        _get_selections(channels, startdate, enddate)
+    end
+
+    GC.@preserve mstl time_tol_func_ptr selections selecttime begin
+        err = @ccall libmseed.mstl3_readbuffer_selection(
+            mstl[]::Ref{Ptr{MS3TraceList}},
+            buffer::Ref{UInt8},
+            buffer_length::UInt64,
+            0::Int8,
+            flags::UInt32,
+            tolerance::Ptr{Cvoid},
+            selections::Ptr{MS3Selections},
+            verbose_level::Int8
+        )::Int64
+
+        # libmseed does not returns an error if no selections match
+        if err < 0
+            free!(mstl)
+            check_error_value_and_throw(err)
+        end
+
+        # This handles the case where there are no traces correctly
+        tracelist = MseedTraceList(mstl; headers_only)
+        free!(mstl)
+    end
+
+    tracelist
+end
+
+"""
+    read_file(file; channels::AbstractString, startdate::DateTime, enddate::DateTime, headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
+
+Read miniSEED data from `file` on disk and return `tracelist`, (a
+`MseedTraceList`) containing the data.  If `headers_only` is `true`, then
+only headers are read the the data are not unpacked.  In this case, the element
+type of the data cannot be calculated and instead is marked as `Missing`.
+
+If `file` does not contain valid data then an error is thrown.
+
+`channels` can contain a globbing pattern which matches the 'id' string of
+chennls in the file, which will be of the form
+`"FDSN:NET_STA_CHA_BAND_SOURCE_POSITION"`.  By default all channels are read.
+
+To limit data approximately to the date range `startdate` to `enddate`,
+pass these as keyword arguments.  If only one of `startdate` or `enddate`
+are set, respectively, then the `enddate` and `startdate` is left open.
+The default is to read data from all time periods.
+
+!!! Some data from before `startdate` or after `enddate` may be included
+    as only whole blocks are returned.  You will need to cut the data
+    after reading to ensure no samples outside the desired time window
+    are present.
+
+If no records match `channels`, or all data for selected channels lie
+outside `startdate` to `enddate`, then an empty tracelist is returned.
+
+By default, trace segments with gaps of less than half the nominal sampling
+interval are joined together to form a single segment.  This behaviour
+can be adjusted by passing a value in seconds to `time_tolerance`, in which
+case segments with gaps of less than `time_tolerance` s are joined.  Pass
+`time_tolerance = 0` to not merge segments with gaps.
+
+!!! note
+    `time_tolerance` can only be used on x86 and x64 platforms.  It is not
+    possible to use it on PowerPC or ARM processors such as Apple Silicon ones.
+    Users of these platforms will need to accept the default behaviour
+    and manually join segments separated with gaps larger than the default
+    tolerance.  See the note at
+    https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/#Closure-cfunctions .
+
+`verbose_level` is passed to the `libmseed` routine `mstl3_readtracelist_selection`
+to control the verbosity level, with `0` (the default) only writing
+error messages to stderr, and higher numbers causing more information
+to be printed.
+"""
+function read_file(file;
+    headers_only=false,
+    channels=nothing,
+    startdate=nothing,
+    enddate=nothing,
+    time_tolerance=nothing,
+    verbose_level=0
+)
     flags = headers_only ? 0x0000 : (MSF_VALIDATECRC | MSF_UNPACKDATA)
     mstl = Ref(init_tracelist())
 
     time_tol_func_ptr, tolerance = _get_time_tolerance_func_ptr(time_tolerance)
 
-    GC.@preserve mstl time_tol_func_ptr begin
-        err = @ccall libmseed.ms3_readtracelist(
+    selections, selecttime = if all(isnothing, (channels, startdate, enddate))
+        C_NULL, C_NULL
+    else
+        _get_selections(channels, startdate, enddate)
+    end
+
+    GC.@preserve mstl time_tol_func_ptr selecttime selections begin
+        err = @ccall libmseed.ms3_readtracelist_selection(
             mstl[]::Ref{Ptr{MS3TraceList}},
             file::Cstring,
             tolerance::Ptr{MS3Tolerance},
-            (-1)::Int8,
+            selections::Ptr{MS3Selections},
+            0::Int8,
             flags::UInt32,
             verbose_level::Int8
         )::Cint
 
-        if err != MS_NOERROR
+        # libmseed returns a 'not SEED data' error if no selections match
+        if err == MS_NOTSEED && selections != C_NULL
+            free!(mstl)
+            return MseedTraceList([])
+        elseif err != MS_NOERROR
             free!(mstl)
             check_error_value_and_throw(err, file)
-        elseif err > 0
-            check_error_value_and_warn(err, file)
         end
 
         tracelist = MseedTraceList(mstl; headers_only)
@@ -365,7 +444,7 @@ const _MS_ERROR_MESSAGES = Dict{Cint,String}(
     MS_NOTSEED => "Data are not SEED",
     MS_WRONGLENGTH => "Length of SEED data was not correct",
     MS_OUTOFRANGE => "SEED record length out of range",
-    MS_UNKNOWNFORMAT => "Unkonwn data encoding format",
+    MS_UNKNOWNFORMAT => "Unknown data encoding format",
     MS_STBADCOMPFLAG => "Invalid Steim compression flag(s)",
     MS_INVALIDCRC => "Invalid CRC checksum for data"
 )
@@ -438,4 +517,60 @@ function _get_time_tolerance_func_ptr(time_tolerance)
     )
 
     time_tol_func_ptr, tolerance
+end
+
+"""
+    _get_selections(channels, startdate, enddate) -> selections, selecttime
+
+Create `MS3Selections` and `MS3SelectTime` objects containing the
+globbing pattern in `channels` and the date range specified by `startdate`
+and `enddate`.
+"""
+function _get_selections(channels, startdate, enddate)
+    if isnothing(channels)
+        channels = "*"
+    elseif !isascii(channels)
+        throw(ArgumentError("channel ID matching patterns must be ASCII text"))
+    end
+
+    sidtype = fieldtype(MS3Selections, :sidpattern)
+
+    starttime = if isnothing(startdate)
+        NSTUNSET
+    else
+        convert(nstime_t, NanosecondDateTime(startdate))
+    end
+    endtime = if isnothing(enddate)
+        NSTUNSET
+    else
+        convert(nstime_t, NanosecondDateTime(enddate))
+    end
+
+    selecttime = Ref(MS3SelectTime(starttime, endtime, C_NULL))
+
+    selections = Ref(MS3Selections(
+        _to_c_string(sidtype, isnothing(channels) ? "*" : channels),
+        pointer_from_objref(selecttime),
+        C_NULL,
+        0
+    ))
+
+    # Pass both back to ensure nothing gets unduly garbage collected
+    selections, selecttime
+end
+
+"""
+    _to_c_string(::Type{NTuple{N,T}}, s::AbstractString) where {N,T} -> c_string
+
+Convert a string `s` into an `NTuple{N,T}` of `T`s, throwing an error
+if `s` is longer than `N` ASCII characters, and if `s` is not ASCII.
+Extra space in `c_string` is filled with 0 values.
+"""
+function _to_c_string(::Type{NTuple{N,T}}, s::AbstractString) where {N,T}
+    isascii(s) || throw(ArgumentError("string must be ASCII"))
+    n = length(s)
+    length(s) > N && throw(ArgumentError("string is too long"))
+    let n = n, s = s
+        ntuple(i -> i <= n ? T(s[i]) : T(0x0), N)
+    end
 end

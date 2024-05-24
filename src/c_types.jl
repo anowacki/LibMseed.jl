@@ -47,6 +47,12 @@ const MSF_MAINTAINMSTL = 0x0200
 "Integer type used for times in the C library"
 const nstime_t = Int64
 
+"Time value returned to indicate an error condition"
+const NSTERROR = nstime_t(-2145916800000000000)
+
+"Time value to indicate an unset time window end point"
+const NSTUNSET =  nstime_t(-2145916799999999999)
+
 # C structs used for libmseed
 @eval struct MS3Record
     record::Cstring
