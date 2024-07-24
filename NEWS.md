@@ -1,3 +1,20 @@
+# LibMseed.jl v0.3.3 release notes
+
+- `read_file` and `read_buffer`: Add ability to limit reading of
+ data to a specified time window with the `startdate` and `enddate`
+ keyword arguments, and limit reading to certain channels with the
+ `channels` keyword argument.  The latter takes a globbing string
+ which can be used to match channels, such as `"FDSN:GB_*_*_B_?_Z"`
+ to get all location of all stations in the GB network, and only the
+ vertical components of broadband instruments, regardless of the
+ sampling rate.
+
+
+# LibMseed.jl v0.3.1 release notes
+
+- Update required version of libmseed to v3.0.18
+
+
 # LibMseed.jl v0.3.0 release notes
 
 ## libmseed library version

@@ -30,7 +30,7 @@ you need, or always prepend names with `LibMseed`.
 ### Reading data from disk
 Use `read_file` function to read miniSEED data
 from disk.  Here we assume you have a file called `example.mseed` in the
-current dirctory.
+current directory.
 
 ```julia
 julia> import LibMseed
@@ -59,6 +59,39 @@ MseedTraceList:
   "FDSN:GB_CWF__B_H_Z": 2008-02-27T00:56:45.404999000 2008-02-27T00:57:45.384999000, 1 segments
   "FDSN:GB_CWF__H_H_Z": 2008-02-27T00:56:45.409999000 2008-02-27T00:57:45.399999000, 1 segments
 ```
+
+### Reading specific channels or time ranges
+`read_file` and `read_buffer` support the `startdate`, `enddate` and
+`channels` keyword arguments.
+
+`startdate` and `enddate` limit the time window read, but the underlying
+libmseed library does not ensure that the first sample of the traces
+returned is at the start date requested, so you may need to further trim
+traces:
+
+```julia
+julia> using Dates: DateTime
+
+julia> file = joinpath(dirname(pathof(LibMseed)), "..", "test", "data", "Int32-oneseries-mixedlengths-mixedorder.mseed");
+
+julia> ms = LibMseed.read_file(file)
+MseedTraceList:
+ 1 trace:
+  "FDSN:XX_TEST_00_L_H_Z": 2010-02-27T06:50:00.069539000 2010-02-27T07:55:51.069539000, 1 segments
+
+julia> LibMseed.read_file(file; startdate=DateTime(2010, 2, 27, 7, 45))
+MseedTraceList:
+ 1 trace:
+  "FDSN:XX_TEST_00_L_H_Z": 2010-02-27T07:22:00.069539000 2010-02-27T07:55:51.069539000, 1 segments
+```
+
+`channels` is a string which is matched against the
+[FDSN source ID](http://docs.fdsn.org/projects/source-identifiers/en/v1.0/)
+of each channel to determine whether to read it.  `*` indicates any number
+of any character (including zero), while `?` indicates exactly one character
+of any kind.  E.g., `FDSN:GB_*Z` matches all vertical channels in the
+GB network.
+
 
 ### Accessing data
 `LibMseed.read_file` returns a `LibMseed.MseedTraceList`, which is a structure
