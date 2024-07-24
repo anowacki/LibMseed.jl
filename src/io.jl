@@ -32,8 +32,10 @@ Parse data in `buffer` (a series of bytes) as miniSEED data and return
 If `buffer` is not valid miniSEED data, then an error is thrown.
 
 `channels` can contain a globbing pattern which matches the 'id' string of
-chennls in the file, which will be of the form
-`"FDSN:NET_STA_CHA_BAND_SOURCE_POSITION"`.  By default all channels are read.
+channels in the file, which will be of the form
+`"FDSN:NET_STA_CHA_BAND_SOURCE_POSITION"` (an FDSN Source ID;
+http://docs.fdsn.org/projects/source-identifiers/en/v1.0/).
+By default all channels are read.
 
 To limit data approximately to the date range `startdate` to `enddate`,
 pass these as keyword arguments.  If only one of `startdate` or `enddate`
@@ -133,7 +135,9 @@ If `file` does not contain valid data then an error is thrown.
 
 `channels` can contain a globbing pattern which matches the 'id' string of
 chennls in the file, which will be of the form
-`"FDSN:NET_STA_CHA_BAND_SOURCE_POSITION"`.  By default all channels are read.
+`"FDSN:NET_STA_CHA_BAND_SOURCE_POSITION"` (an FDSN Source ID;
+http://docs.fdsn.org/projects/source-identifiers/en/v1.0/).
+By default all channels are read.
 
 To limit data approximately to the date range `startdate` to `enddate`,
 pass these as keyword arguments.  If only one of `startdate` or `enddate`
@@ -147,6 +151,8 @@ The default is to read data from all time periods.
 
 If no records match `channels`, or all data for selected channels lie
 outside `startdate` to `enddate`, then an empty tracelist is returned.
+The underlying libmseed library will also print an error to stdout;
+this is erroneous and unfortunately unavoidable.
 
 By default, trace segments with gaps of less than half the nominal sampling
 interval are joined together to form a single segment.  This behaviour
