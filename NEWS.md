@@ -10,6 +10,14 @@
  sampling rate.
 
 
+# LibMseed.jl v0.3.2 release notes
+
+- Add the `headers_only` keyword argument to `read_file` and `read_buffer`
+  to read only the trace headers, and not the data.
+- Fixed a bug in `channel_code_parts`.  This now correctly returns
+  empty strings for empty channel code parts.
+
+
 # LibMseed.jl v0.3.1 release notes
 
 - Update required version of libmseed to v3.0.18
