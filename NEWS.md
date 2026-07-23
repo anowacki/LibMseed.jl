@@ -1,3 +1,12 @@
+# LibMseed.jl v0.3.4 release notes
+
+- `read_file` and `read_buffer`: Add the `throw_on_notseed` Boolean
+  keyword argument.  If this is `false`, then the functions do not
+  throw an error when the file or buffer passed in is not SEED data,
+  and instead return an empty `MseedTraceList`.  The default behaviour
+  is to throw an error as before.
+
+
 # LibMseed.jl v0.3.3 release notes
 
 - `read_file` and `read_buffer`: Add ability to limit reading of

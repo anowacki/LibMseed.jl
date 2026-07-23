@@ -24,12 +24,13 @@ function sample_type(t)
 end
 
 """
-    read_buffer(buffer::Vector{UInt8}; channels::AbstractString, startdate::DateTime, enddate::DateTime, headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
+    read_buffer(buffer::Vector{UInt8}; channels::AbstractString, startdate::DateTime, enddate::DateTime, headers_only=false, time_tolerance=nothing, throw_on_notseed=true, verbose_level=0) -> tracelist
 
 Parse data in `buffer` (a series of bytes) as miniSEED data and return
 `tracelist` (a `MseedTraceList`) containing the data.
 
-If `buffer` is not valid miniSEED data, then an error is thrown.
+If `buffer` is not valid miniSEED data, then by default an error is thrown.
+If `throw_on_notseed` is `true`, then an empty trace list is returned instead.
 
 `channels` can contain a globbing pattern which matches the 'id' string of
 channels in the file, which will be of the form
@@ -75,11 +76,16 @@ function read_buffer(buffer::Vector{UInt8};
     startdate=nothing,
     enddate=nothing,
     time_tolerance=nothing,
+    throw_on_notseed=true,
     verbose_level=0
 )
     version, len = detect_buffer(buffer)
     if version === nothing
-        throw(ArgumentError("data does not seem to be miniSEED"))
+        if throw_on_notseed
+            throw(ArgumentError("data does not seem to be miniSEED"))
+        else
+            return MseedTraceList(MseedTraceID[])
+        end
     end
     if len === nothing
         error("buffer length cannot be determined")
@@ -124,14 +130,15 @@ function read_buffer(buffer::Vector{UInt8};
 end
 
 """
-    read_file(file; channels::AbstractString, startdate::DateTime, enddate::DateTime, headers_only=false, time_tolerance=nothing, verbose_level=0) -> tracelist
+    read_file(file; channels::AbstractString, startdate::DateTime, enddate::DateTime, headers_only=false, time_tolerance=nothing, throw_on_notseed=true, verbose_level=0) -> tracelist
 
 Read miniSEED data from `file` on disk and return `tracelist`, (a
 `MseedTraceList`) containing the data.  If `headers_only` is `true`, then
 only headers are read the the data are not unpacked.  In this case, the element
 type of the data cannot be calculated and instead is marked as `Missing`.
 
-If `file` does not contain valid data then an error is thrown.
+If `file` does not contain valid data then by default an error is thrown.
+If `throw_on_notseed` is `true`, then an empty trace list is returned instead.
 
 `channels` can contain a globbing pattern which matches the 'id' string of
 chennls in the file, which will be of the form
@@ -179,6 +186,7 @@ function read_file(file;
     startdate=nothing,
     enddate=nothing,
     time_tolerance=nothing,
+    throw_on_notseed=true,
     verbose_level=0
 )
     flags = headers_only ? 0x0000 : (MSF_VALIDATECRC | MSF_UNPACKDATA)
@@ -206,7 +214,11 @@ function read_file(file;
         # libmseed returns a 'not SEED data' error if no selections match
         if err == MS_NOTSEED && selections != C_NULL
             free!(mstl)
-            return MseedTraceList([])
+            return MseedTraceList(MseedTraceID[])
+        elseif err == MS_NOTSEED && !throw_on_notseed
+            free!(mstl)
+            check_error_value_and_warn(err, file)
+            return MseedTraceList(MseedTraceID[])
         elseif err != MS_NOERROR
             free!(mstl)
             check_error_value_and_throw(err, file)
