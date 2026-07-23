@@ -111,7 +111,13 @@ is_cfunc_closure_supported_platform() = Sys.ARCH in (:i686, :x86_64)
 
         @testset "read_buffer" begin
             @testset "Not SEED" begin
-                @test_throws ArgumentError LibMseed.read_buffer(UInt8[1,2,3])
+                # Note: On Windows x86, we get EXCEPTION_ACCESS_VIOLATION when
+                # trying to use a buffer of 3 `UInt8`s, so we use a much bigger
+                # buffer instead.
+                buf = rand(UInt8, 1000)
+                @test_throws ArgumentError LibMseed.read_buffer(buf)
+                @test_throws ArgumentError LibMseed.read_buffer(buf; throw_on_notseed=true)
+                @test LibMseed.read_buffer(buf; throw_on_notseed=false) == MseedTraceList([])
             end
 
             @testset "time_tolerance" begin
@@ -165,6 +171,23 @@ is_cfunc_closure_supported_platform() = Sys.ARCH in (:i686, :x86_64)
         end
 
         @testset "read_file" begin
+            @testset "Not SEED" begin
+                mktempdir() do dir
+                    file = joinpath(dir, "not_miniseed.bin")
+                    write(file, rand(UInt8, 100))
+
+                    capture_stderr() do
+                        @test_throws ErrorException read_file(file)
+                    end
+                    @test_logs(
+                        (:warn, r"Data are not SEED in file .*not_miniseed.bin"),
+                        @test(
+                            read_file(file; throw_on_notseed=false) == MseedTraceList([])
+                        )
+                    )
+                end
+            end
+
             @testset "time_tolerance" begin
                 if is_cfunc_closure_supported_platform()
                     @testset "Join segments" begin
